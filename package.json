@@ -1,0 +1,24 @@
+{
+  "name": "rff-regional-comparison",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "homepage": "https://neitling78.github.io/rff-regional-comparison",
+  "description": "Regional fire department compensation comparison — IAFF Local 1592",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "gh-pages": "^6.2.0",
+    "vite": "^5.4.10"
+  }
+}
