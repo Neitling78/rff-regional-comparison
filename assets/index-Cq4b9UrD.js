@@ -207,8 +207,8 @@ Paid on both Base + incentives.  Anything PERSable is my guess
 .rff-root .bg-fx::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(30,58,95,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(30,58,95,.13) 1px,transparent 1px);background-size:46px 46px;-webkit-mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,#000 40%,transparent 100%);mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,#000 40%,transparent 100%);}
 .rff-root .bg-fx::after{content:"";position:absolute;top:-220px;left:50%;transform:translateX(-50%);width:900px;height:600px;border-radius:50%;filter:blur(130px);background:radial-gradient(circle,rgba(232,93,4,.20),transparent 60%);}
 .rff-root .content{position:relative;z-index:1;}
-.rff-root .brand-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("${Hc}");background-repeat:no-repeat;background-position:center 44%;background-size:min(72vmin,640px);opacity:.13;}
-.rff-root .brand-veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at center 44%, transparent 32%, rgba(6,10,18,.55) 80%);}
+.rff-root .brand-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("${Hc}");background-repeat:no-repeat;background-position:center 44%;background-size:min(36vmin,320px);opacity:.13;}
+.rff-root .brand-veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 40% 42% at center 44%, transparent 30%, rgba(6,10,18,.55) 82%);}
 .rff-root .nav{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:11px 26px;background:rgba(6,10,18,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
 .rff-root .crest{width:46px;height:46px;flex:0 0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .rff-root .crest img{width:100%;height:100%;object-fit:contain;}
