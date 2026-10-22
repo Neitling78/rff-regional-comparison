@@ -410,7 +410,7 @@ Raises:
 .rff-root .bg-fx::before{content:"";position:absolute;inset:0;background:transparent;-webkit-mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,#000 40%,transparent 100%);mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,#000 40%,transparent 100%);}
 .rff-root .bg-fx::after{content:"";position:absolute;inset:0;background:transparent;opacity:0);}
 .rff-root .content{position:relative;z-index:1;}
-.rff-root .brand-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("${hd}");background-repeat:no-repeat;background-position:center 44%;background-size:min(64vmin,560px);opacity:.09;}
+.rff-root .brand-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("${hd}");background-repeat:no-repeat;background-position:74% 44%;background-size:min(64vmin,560px);opacity:.09;}
 .rff-root .brand-veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:transparent;}
 .rff-root .nav{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 26px;background:rgba(252,253,249,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);box-shadow:0 1px 3px rgba(40,48,30,.06);}
 .rff-root .crest{width:46px;height:46px;flex:0 0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;}
