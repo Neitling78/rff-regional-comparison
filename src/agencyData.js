@@ -890,16 +890,45 @@ export function verifiedDataset(verifyData={}, opts={}){
 }
 // Which figures differ between the Verification tracker and the sourced DATA array.
 // Surfaced on the tabs so a divergence can never sit there unnoticed.
+export const _DIFF_LABEL={med:"Medical",dv:"Dental/Vision",ltd:"LTD",life:"Life",unif:"Uniforms /yr",
+  vaca:"Vacation hrs",sick:"Sick hrs",cityRHS:"City RHS",other:"Other Pay",pers:"PERS rate",ss:"Social Security",
+  ed:"Education",special:"Special Ops",longev:"Longevity",deferred:"Deferred",eeRHS:"Employee RHS",holiday:"Holiday"};
 export function verifiedDiff(verifyData={}){
   const out=[];
+  const num=(x)=>{ if(x==null) return null;
+    if(typeof x==="number") return x;
+    if(typeof x==="object"){ if(x.z!==undefined) return 0;
+      return (x.pct!==undefined?x.pct:0)*1e6 + (x.flat!==undefined?x.flat:0) + (x.hrs!==undefined?x.hrs:0)
+           + (x.pctEFGH!==undefined?x.pctEFGH*1e6:0); }
+    return null; };
   DATA.forEach(a=>{ const v=_verifiedAgency(a, verifyData[a.name]||{});
-    ["med","dv","ltd","life","unif","vaca","sick","cityRHS","other","pers","ss"].forEach(k=>{
-      const A=a[k], B=v[k];
-      if(typeof A==="number" && typeof B==="number" && Math.abs(A-B)>0.005)
-        out.push({agency:a.shortName, field:k, sourced:A, verified:B});
+    Object.keys(_DIFF_LABEL).forEach(k=>{
+      const A=num(a[k]), B=num(v[k]);
+      if(A!==null && B!==null && Math.abs(A-B)>0.005)
+        out.push({agency:a.shortName, name:a.name, field:k, label:_DIFF_LABEL[k],
+                  sourced:a[k], verified:v[k], isRose:!!a.highlight});
     });
   });
   return out;
+}
+// What the Verification corrections are actually worth: the City-method and True-method
+// raise with the sourced data versus with the verified data, so the move is attributable.
+export function verifiedImpact(verifyData={}, agenciesOn=null){
+  const srcd=DATA;
+  const verd=DATA.map(a=>_verifiedAgency(a, verifyData[a.name]||{}));
+  const solve=(ds)=>{
+    const cityRows=buildAgencies({"City of Roseville":{operationalPct:0.05}}, agenciesOn, ds);
+    const trueRows=buildTrueComp({},{},null,{},agenciesOn, ds);
+    const roseA=ds.find(a=>a.highlight);
+    const cityPct=(cityRows.find(r=>r.isPercentile)||{}).monthlyGross;
+    const truePct=(trueRows.find(r=>r.isPercentile)||{}).tc_monthlyGross;
+    const sv=(fn,target)=>{ if(target==null) return null; let lo=-0.5,hi=2.0;
+      for(let i=0;i<60;i++){const mid=(lo+hi)/2; (fn(mid)<target)?lo=mid:hi=mid;} return r2((lo+hi)/2*100); };
+    return { city: sv(r=>computeCity(roseA,{_solveRaise:r, operationalPct:0.05}).monthlyGross, cityPct),
+             true_: sv(r=>computeTrue(roseA,{_solveRaise:r},{}).tc_monthlyGross, truePct) };
+  };
+  const A=solve(srcd), B=solve(verd);
+  return { sourcedCity:A.city, verifiedCity:B.city, sourcedTrue:A.true_, verifiedTrue:B.true_ };
 }
 export function verifiedSummary(verifyData={}, agenciesOn=null){
   const ds=DATA.map(a=>_verifiedAgency(a, verifyData[a.name]||{}));

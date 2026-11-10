@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -385,6 +385,8 @@ export default function ComparisonTool() {
   // the sourced figure is used, so an unfilled tracker changes nothing.
   const sharedDataset = useMemo(() => verifiedDataset(verifyData, { post2017: hiredPost2017 }), [verifyData, hiredPost2017]);
   const dataDiff = useMemo(() => verifiedDiff(verifyData), [verifyData]);
+  // What those corrections are worth, so a moved headline is always attributable.
+  const dataImpact = useMemo(() => verifiedImpact(verifyData, agenciesOnArr), [verifyData, agenciesOnArr]);
   function toggleAgency(name) { setAgenciesOn(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; }); }
   function resetAgencies() { setAgenciesOn(new Set(COMPARABLE_NAMES)); }
   const allAgenciesOn = COMPARABLE_NAMES.every(n => agenciesOn.has(n));
@@ -767,6 +769,24 @@ export default function ComparisonTool() {
                     <div className="sec-tag">Raise to Reach the 55th Percentile</div>
                     <div className="sec-title">What We Need to Fight For</div>
                   </div>
+                  {dataDiff.length > 0 && (
+                    <div style={{ fontSize:"12px", lineHeight:1.7, color:C.text, marginBottom:"14px", padding:"12px 15px", background:"rgba(154,118,54,0.08)", border:`1.5px solid ${C.gold}`, borderRadius:"10px", maxWidth:"760px" }}>
+                      <div style={{ fontWeight:800, color:C.gold, marginBottom:"4px" }}>This number includes {dataDiff.length} correction{dataDiff.length===1?"":"s"} from your Verification tab</div>
+                      <div>Every tab now runs on your verified data. Without these corrections the City method would read{" "}
+                        <strong>{dataImpact.sourcedCity==null?"\u2014":dataImpact.sourcedCity.toFixed(2)+"%"}</strong> and True Total Comp{" "}
+                        <strong>{dataImpact.sourcedTrue==null?"\u2014":dataImpact.sourcedTrue.toFixed(2)+"%"}</strong>; with them it reads{" "}
+                        <strong>{dataImpact.verifiedCity==null?"\u2014":dataImpact.verifiedCity.toFixed(2)+"%"}</strong> and{" "}
+                        <strong>{dataImpact.verifiedTrue==null?"\u2014":dataImpact.verifiedTrue.toFixed(2)+"%"}</strong>.</div>
+                      <div style={{ marginTop:"7px", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px,1fr))", gap:"1px 18px" }}>
+                        {dataDiff.slice(0,24).map((d,i)=>(
+                          <div key={i} style={{ fontSize:"11px", color: d.isRose?C.gold:C.textMuted, fontWeight: d.isRose?700:400 }}>
+                            <span style={{ display:"inline-block", minWidth:"96px" }}>{d.agency}</span>{d.label}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop:"6px", color:C.textDim }}>These are figures where your Verification entry differs from the originally sourced value. The verified entry wins. Check them on the Verification tab if a number here looks wrong.</div>
+                    </div>
+                  )}
                   <div className="fade" style={{ display: "grid", gap: "12px", maxWidth: "480px" }}>
                     {persMode ? (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "18px", background: `linear-gradient(180deg, rgba(154,118,54,0.10), ${C.bg})`, border: `1px solid ${C.gold}`, borderRadius: "12px", padding: "18px 20px" }}>
