@@ -41,7 +41,7 @@ md5 ~/Development/rff-regional-comparison/src/agencyData.js ~/Development/rff-re
 Current build (2026-11-10, Classic PERS + longevity years + pensionable income):
 ```
 agencyData.js       d14ad0ddbab08e2c71a7e979b6af44d8   123743 bytes
-ComparisonTool.jsx  0b5155cc442f26a41979ae47d8746058   217647 bytes
+ComparisonTool.jsx  8f97989b731e6cdd6e30eadea1de937c   218280 bytes
 ```
 Previous build, also good (pre-Classic, = snapshots/2026-11-10-verified):
 ```

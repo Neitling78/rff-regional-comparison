@@ -1452,9 +1452,17 @@ export default function ComparisonTool() {
               const seed = incMap[ag] || {};
               const cell = { base: (saved.base !== undefined && saved.base !== "") ? saved.base : (baseMap[ag] !== undefined ? String(baseMap[ag]) : "") };
               RANK_FIELDS.forEach(f => { cell[f] = (saved[f] !== undefined && saved[f] !== "") ? saved[f] : (seed[f] !== undefined ? seed[f] : ""); });
-              // At 20 or 25 years the longevity tier replaces the Year-10 seed. A value
-              // typed into the box still wins, so a manual override is never clobbered.
-              if (yearsOn !== 10 && !(saved.longevity !== undefined && saved.longevity !== "")) {
+              // LONGEVITY IS KEYED BY YEAR. A manual override is stored per tier
+              // ("longevity__20"), so an edit at 20 years cannot leak into the 10-year view
+              // and - the bug this replaces - a stale saved value cannot silently block the
+              // year selector. The legacy flat "longevity" key is deliberately IGNORED once
+              // a tier is selected, so a value already sitting in a browser's rff_rankfill
+              // heals itself the moment a year button is used.
+              const lKey = "longevity__" + yearsOn;
+              const lSaved = saved[lKey];
+              if (lSaved !== undefined && lSaved !== "") {
+                cell.longevity = lSaved;
+              } else if (yearsOn !== 10) {
                 const yl = (RANK_LONGEVITY[yearsOn] || {})[ag];
                 if (yl !== undefined) cell.longevity = yl;
               }
@@ -1534,7 +1542,7 @@ export default function ComparisonTool() {
                     }
                     return (
                       <td key={c.k} style={{ padding:"4px 5px", textAlign:"right" }}>
-                        <input value={v} onChange={e=>setRankCell(rank, ag, c.k, e.target.value)} placeholder={ph} title={c.k==="base"?"$/hr plain top step":"native unit — FF value shown grey"} style={{ width:"58px", background: filled?C.bg:"rgba(245,214,90,0.5)", border:`1.5px solid ${C.border}`, borderRadius:"4px", color:C.text, fontSize:"11px", fontWeight:filled?700:400, padding:"3px 4px", textAlign:"right", outline:"none", fontFamily:"inherit" }} />
+                        <input value={v} onChange={e=>setRankCell(rank, ag, c.k==="longevity" ? ("longevity__"+yearsOn) : c.k, e.target.value)} placeholder={ph} title={c.k==="base"?"$/hr plain top step":(c.k==="longevity"?("native unit — this is the "+yearsOn+"-year tier; an edit applies to this tier only"):"native unit — FF value shown grey")} style={{ width:"58px", background: filled?C.bg:"rgba(245,214,90,0.5)", border:`1.5px solid ${C.border}`, borderRadius:"4px", color:C.text, fontSize:"11px", fontWeight:filled?700:400, padding:"3px 4px", textAlign:"right", outline:"none", fontFamily:"inherit" }} />
                       </td>
                     );
                   })}
