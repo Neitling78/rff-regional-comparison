@@ -181,6 +181,69 @@ export const RANK_LONGEVITY_UNSOURCED = ["Sacramento Metro Fire"];
 // only shows the three years the tool models.
 export const SAC_METRO_LONGEVITY_ABRAM = { 10:"2", 15:"4", 17:"6", 20:"9", 25:"12" };
 
+// ── PENSIONABLE INCOME (Engineer and Captain tabs only) ─────────────────
+// Classic members run on CCR 571 (special compensation); PEPRA "new members" run on the
+// SEPARATE exclusive list in CCR 571.1. Checked 11/10/2026 against CalPERS Circular Letter
+// 200-064-17 and CCR 571.1. Among the columns this tool carries, the ONLY Classic/PEPRA
+// difference is the uniform allowance.
+//
+// IN (both tiers): base pay, paramedic/EMT pay, education, special assignment (hazmat,
+//   rescue), longevity, and holiday pay. CCR 571.1 covers incentive pay for years of
+//   service, educational pay (EMT, certificates, degrees), special assignment pay, and
+//   holiday pay for positions required to be staffed on holidays.
+// IN for CLASSIC ONLY: uniform allowance. Circular Letter 200-064-17 lists Uniform
+//   Allowance as not reportable for new members. Vacaville Sec. 12.1 says it outright:
+//   "PERS reportable ... for Classic members only. This pay is NOT PERS reportable for
+//   PEPRA members." Roseville Art. VII reports the uniform value "For Classic employees".
+//   So this follows the Classic PERS button: uniform counts only when Classic is ON.
+// OUT: deferred comp, vacation, sick, retiree health (employee and employer), medical,
+//   dental/vision, LTD, life, Social Security/Medicare, and the PERS contribution itself.
+//   GC 7522.34(c) excludes leave cash-outs and employer allowances; the insurance lines
+//   are employer benefit cost, not compensation.
+//
+// HOLIDAY CAVEAT worth knowing: Circular Letter 200-064-17 says a holiday cash-out must
+// happen at least annually and be reported in the period earned - cashing out only in the
+// final compensation period makes it "final settlement pay and excluded".
+//
+// NOTE ON INTERNAL CONSISTENCY (Abram's call, 11/10/2026): holiday counts here, but the
+// PERS employee deduction elsewhere in this tool is still computed on
+// base+medic+education+special+longevity WITHOUT holiday. Changing that would move the
+// locked Verification foundation and the Firefighter headline, so it was left alone.
+export const PENSIONABLE_KEYS = ["tc_ffMedicMonthly","tc_ed","tc_special","tc_longevity","tc_holiday"];
+// The pensionable slice of each agency's "Other Pay", judged item by item.
+export const PENSIONABLE_OTHER = {
+  "City of Roseville":     0,     // Other Pay is $0
+  // $100/mo of $100. Sec. 9.1 C.E. Pay, paid every pay period at $46.15, and the MOU
+  // states it directly: "Currently it is PERS reportable under Section 571 of the
+  // California Public Employees' Retirement Law (PERL) for Classic and PEPRA members."
+  "City of Vacaville":     100,
+  // $0 of $375. Art. 11 Sec. C calls the IGT allowance "a one-time lump sum NON-PERSABLE
+  // allowance". Excluded by the agreement's own words.
+  "Sacramento Metro Fire": 0,
+  "City of Fairfield":     0,     // Other Pay is $0. (Art. 7.L's $200 HazMat Assistant
+                                  // Team Leader stipend is also expressly "non-PERS
+                                  // reportable", but it is not in the Other column.)
+  "Cosumnes CSD":          0,     // Other Pay is $0
+  "El Dorado Hills Fire":  0,     // Other Pay is $0
+  // $0 of $187.50, which is ($750 fitness + $1,500 medic-unit) / 12. Both are one-time
+  // annual lump sums, which read as bonuses - and bonuses are not reportable for PEPRA
+  // (Circular Letter 200-041-26). The medic-unit payment is worse: it is driven by "an
+  // hour's report, inclusive of regular duty and OVERTIME hours", and GC 7522.34(c)
+  // excludes payments for services outside normal working hours.
+  // ARGUABLE: the $750 fitness piece ($62.50/mo). "Physical Fitness Program" IS a CCR 571
+  // / 571.1 incentive category, so if Folsom reports it, Folsom gains $62.50/mo here.
+  // Excluded because it is paid as a one-time annual payment on passing a test, not as a
+  // scheduled differential. Flagged on the tab.
+  "City of Folsom":        0,
+  "City of Rocklin":       0,     // Other Pay is $0
+  "City of Sacramento":    0,     // Other Pay is $0
+};
+export const PENSIONABLE_OTHER_NOTE = {
+  "City of Vacaville":     "$100 of $100 — Sec. 9.1 C.E. pay, MOU states it is PERS reportable for Classic and PEPRA",
+  "Sacramento Metro Fire": "$0 of $375 — Art. 11 §C calls the IGT a “one-time lump sum non-persable allowance”",
+  "City of Folsom":        "$0 of $187.50 — both pieces are one-time annual lump sums; the medic-unit payment counts overtime hours. The $62.50/mo fitness piece is arguable.",
+};
+
 export const CLASSIC_PERS = {
   // Ch.5 Art.I A.1.a: "CalPERS classic safety employees represented by RFF will pay
   // nine (9%) of compensation earnable as the employee's portion of the contribution
@@ -465,6 +528,8 @@ function computeTrue(a, o, edit){
     tc_deferred:r2(def), tc_other:r2(other), tc_uniforms:r2(unif), tc_holiday:r2(hol), tc_vacation:r2(vac), tc_sick:r2(sic),
     tc_eeRHS:r2(eeR), tc_cityRHS:r2(cR), tc_medical:r2(a.med), tc_dv:r2(a.dv), tc_ltd:r2(a.ltd), tc_life:r2(a.life),
     tc_ssMed:r2(ssMed), tc_pers:r2(persEE+cityPERS), tc_monthlyGross:r2(gross), _longevityPctDefault:lonPctDefault, _specialPctDefault:specialPctDefault, _otherDefault:r2(a.other),
+    // Carried for the pensionable-income view; both default off outside the rank tabs.
+    _pensUnifEligible: !!a._pensUnifEligible, _pensOther: (a._pensOther||0),
   };
 }
 function pct55(rows,key){
@@ -473,7 +538,7 @@ function pct55(rows,key){
   return r2(v[lo]+(pos-lo)*((v[hi]??v[lo])-v[lo]));
 }
 const CITY_KEYS=["topStepHrly","topStepMonthly","topFFMedicMonthly","individualIncentives","operationalIncentives","longevity10yr","deferredComp","totalCash","employeeRHS","cityRHS","medicalFamily","dental","vision","ltd","lifeInsurance","medicareAmt","persEEAmt","cityPERSPaidByEE","monthlyGross"];
-const TRUE_KEYS=["tc_topStepHrly","tc_ffMedicMonthly","tc_ed","tc_special","tc_longevity","tc_deferred","tc_other","tc_uniforms","tc_holiday","tc_vacation","tc_sick","tc_eeRHS","tc_cityRHS","tc_medical","tc_dv","tc_ltd","tc_life","tc_ssMed","tc_pers","tc_monthlyGross"];
+const TRUE_KEYS=["tc_pensionable","tc_topStepHrly","tc_ffMedicMonthly","tc_ed","tc_special","tc_longevity","tc_deferred","tc_other","tc_uniforms","tc_holiday","tc_vacation","tc_sick","tc_eeRHS","tc_cityRHS","tc_medical","tc_dv","tc_ltd","tc_life","tc_ssMed","tc_pers","tc_monthlyGross"];
 
 export function buildAgencies(overrides={}, agenciesOn=null, dataset=DATA){
   const rows=dataset.map(a=>{const row=computeCity(a, overrides[a.name]); row.enabled = row.highlight ? true : (agenciesOn ? agenciesOn.includes(a.name) : true); return row;});
@@ -564,7 +629,12 @@ export function buildTrueComp(overrides={}, trueEdits={}, enabled=null, cellEdit
     row.enabled = row.highlight ? true : (agenciesOn ? agenciesOn.includes(a.name) : true);
     const ce=cellEdits[a.name]||{};
     COMP_KEYS.forEach(k=>{ const v=ce[k]; if(v!==undefined && v!=="" && !isNaN(parseFloat(v))) { row[k]=parseFloat(v); row["_edited_"+k]=true; } });
-    row.tc_monthlyGross=r2(en.reduce((s,k)=>s+(row[k]||0),0)); return row;});
+    row.tc_monthlyGross=r2(en.reduce((s,k)=>s+(row[k]||0),0));
+    // Pensionable income. Summed here rather than in computeTrue so that any manual cell
+    // edit above is already reflected. Uniform only counts for Classic members.
+    row.tc_pensionable=r2(PENSIONABLE_KEYS.reduce((s,k)=>s+(row[k]||0),0)
+      + (row._pensUnifEligible ? (row.tc_uniforms||0) : 0) + (row._pensOther||0));
+    return row;});
   const comps=rows.filter(r=>!r.highlight);
   const incl=rows.filter(r=>r.highlight || r.enabled);
   const pr={name:"55th Percentile",shortName:"55th %ile",highlight:false,isPercentile:true,raise2026:null,raise2027:null,raise2028:null};
@@ -745,6 +815,9 @@ export function buildRankComparison(rank, verifyData={}, rankInputs={}, agencies
       med:(g("tc_medical")===null?a.med:g("tc_medical")), dv:(g("tc_dv")===null?a.dv:g("tc_dv")),
       ltd:(g("tc_ltd")===null?a.ltd:g("tc_ltd")), life:(g("tc_life")===null?a.life:g("tc_life")),
       ss:(ssRaw===null?a.ss:(ssRaw/100-0.0145)),
+      // Uniform is pensionable only for Classic members, so this follows the Classic button.
+      _pensUnifEligible: _classic,
+      _pensOther: (PENSIONABLE_OTHER[a.name]!==undefined ? PENSIONABLE_OTHER[a.name] : 0),
       pers: _classic ? (CLASSIC_PERS[a.name]!==undefined ? CLASSIC_PERS[a.name] : a.pers)
                      : (persRaw===null?a.pers:persRaw/100),
       // Rocklin only: its Classic 12% already contains the 3% cost-share, so the separate

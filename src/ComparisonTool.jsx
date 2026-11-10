@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -640,6 +640,9 @@ export default function ComparisonTool() {
   // the Classic PERS toggle - both can be on at once. Like Classic, this is session-only
   // and resets to 10 on load, because Year 10 is what MOU Ch.2 Art.I A(3) actually specifies.
   const [rankYears, setRankYears] = useState(10);
+  // Pensionable-income view. Session-only like the others: the contractual comparison is
+  // total compensation, so this resets to OFF on every load.
+  const [pensMode, setPensMode] = useState(false);
   const setRankCell = (rank, agency, field, val) => setRankFill(p => ({ ...p, [rank]: { ...(p[rank]||{}), [agency]: { ...((p[rank]||{})[agency]||{}), [field]: val } } }));
   useEffect(() => { try { localStorage.setItem("rff_verify_meta", JSON.stringify(verifyMeta)); } catch (e) {} }, [verifyMeta]);
   const verifySummary = useMemo(() => verifiedSummary(verifyData, null), [verifyData]);
@@ -1458,11 +1461,18 @@ export default function ComparisonTool() {
             // Roseville row to compare against, so it stays on the sourced rates.
             const classicAvail = (rank === "engineer" || rank === "captain");
             const classicOn = classicAvail && classicPers;
+            const pensOn = classicAvail && pensMode;
+            // Which figure the total column and the 55th percentile run on.
+            const METRIC = pensOn ? "tc_pensionable" : "tc_monthlyGross";
+            const PENS_SET = new Set(PENSIONABLE_KEYS);
             const rows = buildRankComparison(rank, verifyData, eff, null, raises, { classic: classicOn });
             const rsv = rows.find(r => r.highlight);
             const pct = rows.find(r => r.isPercentile);
-            const comps = rows.filter(r => !r.highlight && !r.isPercentile).sort((a,b)=>b.tc_monthlyGross-a.tc_monthlyGross);
-            const gap = (rsv && pct && pct.tc_monthlyGross) ? (rsv.tc_monthlyGross/pct.tc_monthlyGross - 1)*100 : null;
+            const comps = rows.filter(r => !r.highlight && !r.isPercentile).sort((a,b)=>b[METRIC]-a[METRIC]);
+            const gap = (rsv && pct && pct[METRIC]) ? (rsv[METRIC]/pct[METRIC] - 1)*100 : null;
+            // The other gap, always computed so the stat card can show both side by side.
+            const altKey = pensOn ? "tc_monthlyGross" : "tc_pensionable";
+            const altGap = (rsv && pct && pct[altKey]) ? (rsv[altKey]/pct[altKey] - 1)*100 : null;
             const incompleteCount = rows.filter(r=>!r.isPercentile && r._missing && r._missing.length).length;
             const EDIT_COLS = [
               { k:"base", lbl:"Base $/hr", rawkey:null },
@@ -1528,9 +1538,11 @@ export default function ComparisonTool() {
                   {DISP_COLS.map(c=>{
                     const blank = !isPct && miss.includes(c.k==="tc_ffMedicMonthly"?"base":c.k);
                     const val = isPct ? pct[c.k] : (blank ? null : r[c.k]);
-                    return <td key={c.k} style={{ padding:"6px 7px", textAlign:"right", whiteSpace:"nowrap", color: blank?C.textDim:C.textMuted, fontStyle: blank?"italic":"normal" }}>{isPct && val==null ? "—" : fmtD(val)}</td>;
+                    // In the pensionable view, strike out whatever does not count toward it.
+                    const counts = !pensOn || PENS_SET.has(c.k) || (c.k==="tc_uniforms" && classicOn);
+                    return <td key={c.k} style={{ padding:"6px 7px", textAlign:"right", whiteSpace:"nowrap", opacity: counts?1:0.32, textDecoration: counts?"none":"line-through", color: blank?C.textDim:C.textMuted, fontStyle: blank?"italic":"normal" }}>{isPct && val==null ? "—" : fmtD(val)}</td>;
                   })}
-                  <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:800, color: isR?C.gold:isPct?C.percentile:C.text, whiteSpace:"nowrap" }}>{fmtM(r.tc_monthlyGross)}</td>
+                  <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:800, color: isR?C.gold:isPct?C.percentile:C.text, whiteSpace:"nowrap" }}>{fmtM(r[METRIC])}</td>
                   <td style={{ padding:"6px 8px", textAlign:"center", fontSize:"10px", color: miss.length?C.danger:C.green, fontWeight:700 }}>{isPct?"":(miss.length?miss.length+" blank":"✓")}</td>
                 </tr>
               );
@@ -1540,7 +1552,7 @@ export default function ComparisonTool() {
               <div className="wrap">
                 <div className="sec-head fade">
                   <div className="sec-tag">Private</div>
-                  <div className="sec-title">{rankLabel} — True Total Comp{yearsOn!==10 ? " @ "+yearsOn+" yrs" : ""}{classicOn ? " (Classic PERS)" : ""}</div>
+                  <div className="sec-title">{rankLabel} — {pensOn ? "Pensionable Income" : "True Total Comp"}{yearsOn!==10 ? " @ "+yearsOn+" yrs" : ""}{classicOn ? " (Classic PERS)" : ""}</div>
                   <div className="sec-sub">Full 55th-percentile comparison for {rankLabel}, every category shown. The seven yellow inputs are rank-specific and are all PRE-FILLED from the MOUs and salary schedules as of 11/10/2026. Medical, dental/vision, LTD, SS/Medicare, PERS, uniforms, holiday, vacation, sick and RHS are inherited from the Verification tab (falling back to the sourced figure) and re-applied to this rank's base. Raises come from the City 55% tab — set them there, not here.</div>
                 </div>
 
@@ -1553,6 +1565,13 @@ export default function ComparisonTool() {
                       style={{ background: classicOn ? C.accent : C.card, color: classicOn ? "#fff" : C.textMuted,
                                border:`1.5px solid ${classicOn ? C.accent : C.border}`, fontWeight:800, padding:"7px 14px", cursor:"pointer" }}>
                       {classicOn ? "\u25C9 Classic PERS \u2014 ON" : "\u25CB Show as Classic PERS"}
+                    </button>
+                    <button onClick={() => setPensMode(v => !v)} className="chip"
+                      title={pensOn ? "Currently comparing PENSIONABLE income. Click to return to total compensation."
+                                    : "Compare on pensionable income only: base, paramedic/EMT, education, special assignment, longevity, holiday, and uniform for Classic members."}
+                      style={{ background: pensOn ? C.percentile : C.card, color: pensOn ? "#fff" : C.textMuted,
+                               border:`1.5px solid ${pensOn ? C.percentile : C.border}`, fontWeight:800, padding:"7px 14px", cursor:"pointer" }}>
+                      {pensOn ? "\u25C9 Pensionable income \u2014 ON" : "\u25CB Show pensionable income"}
                     </button>
                     <span style={{ width:"1px", height:"22px", background:C.border }} />
                     <span style={{ fontSize:"11px", color:C.textDim, fontWeight:700 }}>Longevity at</span>
@@ -1598,6 +1617,25 @@ export default function ComparisonTool() {
                   </div>
                 )}
 
+                {pensOn && (
+                  <div className="fade" style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>
+                    <div style={{ fontWeight:800, color:C.percentile, marginBottom:"4px" }}>PENSIONABLE INCOME ONLY &mdash; not the contract comparison</div>
+                    <div><strong>Counted:</strong> base pay, paramedic/EMT pay, education, special assignment (hazmat, rescue), longevity, holiday pay{classicOn ? ", and uniform allowance" : ""}. <strong>Struck through in the table:</strong> deferred comp, vacation, sick, retiree health, medical, dental/vision, LTD, life, Social Security/Medicare, and the PERS contribution itself.</div>
+                    <div style={{ marginTop:"6px" }}>Classic members run on CCR 571; PEPRA &ldquo;new members&rdquo; run on the separate exclusive list in CCR 571.1, which covers incentive pay for years of service, educational pay, special assignment pay and holiday pay. Among these columns the <strong>only Classic/PEPRA difference is the uniform allowance</strong> &mdash; CalPERS Circular Letter 200-064-17 lists it as not reportable for new members, and Vacaville Sec. 12.1 says so outright. It follows the Classic PERS button, currently <strong>{classicOn ? "ON, so uniform counts" : "OFF, so uniform is excluded"}</strong>.</div>
+                    <div style={{ marginTop:"7px" }}><strong>Other Pay, judged item by item:</strong></div>
+                    <div style={{ marginTop:"2px" }}>
+                      {rows.filter(r=>!r.isPercentile && PENSIONABLE_OTHER_NOTE[r.name]).map(r=>(
+                        <div key={r.name} style={{ fontSize:"11px", color:C.textMuted }}>
+                          <span style={{ display:"inline-block", minWidth:"108px", fontWeight:700 }}>{r.shortName}</span>{PENSIONABLE_OTHER_NOTE[r.name]}
+                        </div>
+                      ))}
+                      <div style={{ fontSize:"11px", color:C.textDim, marginTop:"2px" }}>Every other agency&rsquo;s Other Pay is $0, so there was nothing to judge.</div>
+                    </div>
+                    <div style={{ marginTop:"7px", color:C.danger, fontWeight:700 }}>Holiday counts here, but the PERS deduction elsewhere in this tool is still computed without it. Fixing that would move the locked Verification foundation and the Firefighter headline, so it was deliberately left alone &mdash; the two are inconsistent by choice, not by accident.</div>
+                    <div style={{ marginTop:"6px", color:C.textDim }}>A holiday cash-out counts only if it happens at least annually and is reported in the period earned; cashed out in a final compensation period it becomes excluded final settlement pay (Circular Letter 200-064-17).</div>
+                  </div>
+                )}
+
                 {classicOn && (
                   <div className="fade" style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(37,99,168,0.07)", border:`1.5px solid ${C.accent}`, borderRadius:"10px" }}>
                     <div style={{ fontWeight:800, color:C.accent, marginBottom:"4px" }}>CLASSIC PERS VIEW &mdash; not the contract comparison</div>
@@ -1618,7 +1656,14 @@ export default function ComparisonTool() {
                   <div style={{ background: classicOn ? `linear-gradient(180deg, rgba(37,99,168,0.10), ${C.bg})` : `linear-gradient(180deg, rgba(154,118,54,0.10), ${C.bg})`, border:`1px solid ${classicOn ? C.accent : C.gold}`, borderRadius:"12px", padding:"18px 20px" }}>
                     <div style={{ fontSize:"13px", fontWeight:700, color: classicOn ? C.accent : C.gold }}>Roseville {rankLabel} vs 55th{yearsOn!==10 ? " \u00b7 "+yearsOn+"yr" : ""}{classicOn ? " \u00b7 Classic" : ""}</div>
                     <div style={{ fontFamily:"'Inter',system-ui,sans-serif", fontWeight:700, fontSize:"34px", whiteSpace:"nowrap", color: gap==null?C.textDim:gap<-0.005?C.danger:C.green, marginTop:"4px" }}>{gap==null?"—":(gap>=0?"+":"")+gap.toFixed(2)+"%"}</div>
-                    <div style={{ fontSize:"12px", color:C.textMuted, marginTop:"2px" }}>{fmtM(rsv&&rsv.tc_monthlyGross)}/mo vs {fmtM(pct&&pct.tc_monthlyGross)}</div>
+                    <div style={{ fontSize:"12px", color:C.textMuted, marginTop:"2px" }}>{fmtM(rsv&&rsv[METRIC])}/mo vs {fmtM(pct&&pct[METRIC])}{pensOn ? " pensionable" : " total comp"}</div>
+                    {classicAvail && altGap!=null && (
+                      <div style={{ marginTop:"8px", paddingTop:"8px", borderTop:`1px solid ${C.border}`, fontSize:"11.5px", color:C.textDim }}>
+                        {pensOn ? "On total compensation" : "On pensionable income"}:{" "}
+                        <strong style={{ color: altGap<-0.005?C.danger:C.green, fontSize:"13px" }}>{(altGap>=0?"+":"")+altGap.toFixed(2)+"%"}</strong>
+                        {"  ("}{fmtM(rsv&&rsv[altKey])} vs {fmtM(pct&&pct[altKey])}{")"}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1635,7 +1680,7 @@ export default function ComparisonTool() {
                         <th style={{ textAlign:"left", padding:"6px 8px", position:"sticky", left:0, background:C.card, zIndex:2 }}>Agency</th>
                         {EDIT_COLS.map(c=><th key={c.k} style={{ padding:"6px 5px", color:c.k==="base"?C.accent:C.gold }}>{c.lbl}</th>)}
                         {DISP_COLS.map(c=><th key={c.k} style={{ padding:"6px 6px" }}>{c.lbl}</th>)}
-                        <th style={{ padding:"6px 8px", color:C.gold }}>Total /mo</th>
+                        <th style={{ padding:"6px 8px", color: pensOn ? C.percentile : C.gold }}>{pensOn ? "Pensionable /mo" : "Total /mo"}</th>
                         <th style={{ padding:"6px 8px" }}>Status</th>
                       </tr>
                     </thead>

@@ -38,10 +38,10 @@ ls -la ~/Development/rff-regional-comparison/src/
 md5 ~/Development/rff-regional-comparison/src/agencyData.js ~/Development/rff-regional-comparison/src/ComparisonTool.jsx
 ```
 
-Current build (2026-11-10, Classic PERS + 10/15/20/25-year longevity selector):
+Current build (2026-11-10, Classic PERS + longevity years + pensionable income):
 ```
-agencyData.js       07d6f28e17958c756bd76417216d81aa   118471 bytes
-ComparisonTool.jsx  69d0b7403eb1a7eefb238e553ebddd99   212040 bytes
+agencyData.js       d14ad0ddbab08e2c71a7e979b6af44d8   123743 bytes
+ComparisonTool.jsx  62ab62d42b83a41b6bdf4d565b673970   217423 bytes
 ```
 Previous build, also good (pre-Classic, = snapshots/2026-11-10-verified):
 ```
