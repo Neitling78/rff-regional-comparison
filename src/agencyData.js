@@ -93,6 +93,24 @@ export const ROSE_RANK_RATIO = { engineer: 1.075, captain: 1.075 * 1.10 };
 // Those Year-10 figures live in RANK_INCENTIVES and are the default. This table only
 // holds the 20- and 25-year tiers, so the two can never drift apart.
 // Every schedule read from MOU text on 11/10/2026. Values in each agency's native unit.
+// ── ROSEVILLE: HIRE DATE DECIDES WHICH SERVICE-PAY ARTICLE APPLIES ───────
+// This has nothing to do with PEPRA. Roseville's own cutoff is JANUARY 1, 2017.
+//   Hired BEFORE 1/1/2017 -> Art. VIII LONGEVITY PAY: 2.5% in years 10-14, 5.0% in
+//     years 15-19, 7.5% from the 20th year on. Art. XI reports Articles VI through X
+//     as CalPERS special compensation, so this IS pensionable.
+//   Hired ON OR AFTER 1/1/2017 -> Art. IX SERVICE TERM BONUS: 2.5% in years 10-14 and
+//     5.0% from the 15th year on, and only with a satisfactory performance review.
+//     Art. XI reports Articles VI through X "EXCLUDING ARTICLE IX", so this is NOT
+//     pensionable, and it never reaches 7.5%.
+// The two tracks are identical at 10 and 15 years and diverge from the 20th year.
+export const ROSEVILLE_SERVICE_PAY = {
+  pre2017:  { 10:"2.5", 15:"5", 20:"7.5", 25:"7.5" },   // Art. VIII, pensionable
+  post2017: { 10:"2.5", 15:"5", 20:"5",   25:"5"   },   // Art. IX, NOT pensionable
+};
+// Only Roseville gates service pay on a hire date. Every other agency's longevity
+// applies to the whole unit, so this toggle changes nothing for them.
+export const HIRE_DATE_AGENCIES = ["City of Roseville"];
+
 export const RANK_LONGEVITY = {
   15: {
     // Art. VIII: "Beginning of 15th year to completion of 19th year 5.0% of base hourly
@@ -530,6 +548,9 @@ function computeTrue(a, o, edit){
     tc_ssMed:r2(ssMed), tc_pers:r2(persEE+cityPERS), tc_monthlyGross:r2(gross), _longevityPctDefault:lonPctDefault, _specialPctDefault:specialPctDefault, _otherDefault:r2(a.other),
     // Carried for the pensionable-income view; both default off outside the rank tabs.
     _pensUnifEligible: !!a._pensUnifEligible, _pensOther: (a._pensOther||0),
+    // Roseville post-2017 hires: Art. IX Service Term Bonus is excluded from CalPERS
+    // special compensation by Art. XI, so it must not count toward pensionable income.
+    _pensNoLongevity: !!a._pensNoLongevity,
   };
 }
 function pct55(rows,key){
@@ -632,7 +653,7 @@ export function buildTrueComp(overrides={}, trueEdits={}, enabled=null, cellEdit
     row.tc_monthlyGross=r2(en.reduce((s,k)=>s+(row[k]||0),0));
     // Pensionable income. Summed here rather than in computeTrue so that any manual cell
     // edit above is already reflected. Uniform only counts for Classic members.
-    row.tc_pensionable=r2(PENSIONABLE_KEYS.reduce((s,k)=>s+(row[k]||0),0)
+    row.tc_pensionable=r2(PENSIONABLE_KEYS.reduce((s,k)=>s+((k==="tc_longevity"&&row._pensNoLongevity)?0:(row[k]||0)),0)
       + (row._pensUnifEligible ? (row.tc_uniforms||0) : 0) + (row._pensOther||0));
     return row;});
   const comps=rows.filter(r=>!r.highlight);
@@ -643,9 +664,9 @@ export function buildTrueComp(overrides={}, trueEdits={}, enabled=null, cellEdit
   const rsv=rows.filter(r=>r.highlight), rest=comps.sort((a,b)=>b.tc_monthlyGross-a.tc_monthlyGross);
   return [...rsv, pr, ...rest];
 }
-export function solveTrueRaise(overrides={}, trueEdits={}, enabled=null, cellEdits={}, agenciesOn=null){
+export function solveTrueRaise(overrides={}, trueEdits={}, enabled=null, cellEdits={}, agenciesOn=null, dataset=DATA){
   const en=(enabled&&enabled.length)?enabled:COMP_KEYS;
-  const rows=buildTrueComp(overrides,trueEdits,en,cellEdits,agenciesOn);
+  const rows=buildTrueComp(overrides,trueEdits,en,cellEdits,agenciesOn,dataset);
   const rsv=rows.find(r=>r.highlight), pct=rows.find(r=>r.isPercentile);
   if(!rsv||!pct||pct.tc_monthlyGross==null) return null;
   const a=DATA.find(x=>x.highlight); const o=overrides[a.name]||{}; const edit=trueEdits[a.name]||{};
@@ -768,6 +789,9 @@ export function buildRankComparison(rank, verifyData={}, rankInputs={}, agencies
   // is to ask "what does this rank look like for a Classic member", and the Verification
   // tab holds PEPRA rates. Rocklin's cityPERS cost-share is left alone (see CLASSIC_PERS).
   const _classic = !!(opts && opts.classic);
+  // Roseville only: true means the member was hired on or after 1/1/2017, so their
+  // service pay is the Art. IX Service Term Bonus and is NOT pensionable.
+  const _post2017 = !!(opts && opts.post2017);
   const missingBy={};
   const _roseRatio=ROSE_RANK_RATIO[rank]||null;
   const ds=DATA.map(a=>{
@@ -818,6 +842,7 @@ export function buildRankComparison(rank, verifyData={}, rankInputs={}, agencies
       // Uniform is pensionable only for Classic members, so this follows the Classic button.
       _pensUnifEligible: _classic,
       _pensOther: (PENSIONABLE_OTHER[a.name]!==undefined ? PENSIONABLE_OTHER[a.name] : 0),
+      _pensNoLongevity: (_post2017 && HIRE_DATE_AGENCIES.indexOf(a.name)!==-1),
       pers: _classic ? (CLASSIC_PERS[a.name]!==undefined ? CLASSIC_PERS[a.name] : a.pers)
                      : (persRaw===null?a.pers:persRaw/100),
       // Rocklin only: its Classic 12% already contains the 3% cost-share, so the separate
@@ -851,6 +876,30 @@ function _verifiedAgency(a, vr){
     ss: has("tc_ssMed")?(g("tc_ssMed")/100-0.0145):a.ss,
     pers: has("tc_pers")?(g("tc_pers")/100):a.pers,
   };
+}
+// The single dataset every tab should run on, so a Verification correction reaches the
+// City 55%, True 55% and rank tabs alike. Where a Verification cell is empty the agency's
+// own sourced figure is used, so an unfilled tracker changes nothing.
+export function verifiedDataset(verifyData={}, opts={}){
+  const post2017=!!(opts&&opts.post2017);
+  return DATA.map(a=>{
+    const v=_verifiedAgency(a, verifyData[a.name]||{});
+    if(post2017 && HIRE_DATE_AGENCIES.indexOf(a.name)!==-1) v._pensNoLongevity=true;
+    return v;
+  });
+}
+// Which figures differ between the Verification tracker and the sourced DATA array.
+// Surfaced on the tabs so a divergence can never sit there unnoticed.
+export function verifiedDiff(verifyData={}){
+  const out=[];
+  DATA.forEach(a=>{ const v=_verifiedAgency(a, verifyData[a.name]||{});
+    ["med","dv","ltd","life","unif","vaca","sick","cityRHS","other","pers","ss"].forEach(k=>{
+      const A=a[k], B=v[k];
+      if(typeof A==="number" && typeof B==="number" && Math.abs(A-B)>0.005)
+        out.push({agency:a.shortName, field:k, sourced:A, verified:B});
+    });
+  });
+  return out;
 }
 export function verifiedSummary(verifyData={}, agenciesOn=null){
   const ds=DATA.map(a=>_verifiedAgency(a, verifyData[a.name]||{}));

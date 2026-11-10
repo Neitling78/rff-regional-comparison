@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -356,6 +356,35 @@ export default function ComparisonTool() {
   const [agenciesOn, setAgenciesOn] = useState(() => { try { const s = JSON.parse(localStorage.getItem("rff_agencies_on") || "null"); return new Set(Array.isArray(s) ? s.filter(n => COMPARABLE_NAMES.includes(n)) : COMPARABLE_NAMES); } catch (e) { return new Set(COMPARABLE_NAMES); } });
   useEffect(() => { try { localStorage.setItem("rff_agencies_on", JSON.stringify([...agenciesOn])); } catch (e) {} }, [agenciesOn]);
   const agenciesOnArr = useMemo(() => [...agenciesOn], [agenciesOn]);
+  // Roseville's service pay is gated on a hire date of 1/1/2017, NOT on PEPRA.
+  // Before: Art. VIII Longevity, pensionable, reaching 7.5% at 20 years.
+  // On/after: Art. IX Service Term Bonus, excluded from special comp by Art. XI,
+  // capped at 5.0%. This is global state so every tab answers the same question.
+  const [hiredPost2017, setHiredPost2017] = useState(false);
+  // Verification tracker state lives HERE, above every consumer, so the shared dataset
+  // below can be built before buildAgencies/buildTrueComp run.
+  const [verifyData, setVerifyData] = useState(() => {
+    try {
+      const main = JSON.parse(localStorage.getItem("rff_verify_v1") || "{}");
+      if (main && Object.keys(main).length) return main;
+      // main is empty — recover from the auto-backup if one exists
+      const bak = JSON.parse(localStorage.getItem("rff_verify_v1_bak") || "{}");
+      return (bak && Object.keys(bak).length) ? bak : {};
+    } catch (e) { return {}; }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("rff_verify_v1", JSON.stringify(verifyData));
+      // keep a redundant backup, but ONLY when there is real data, so an accidental
+      // empty never overwrites the last good copy
+      if (verifyData && Object.keys(verifyData).length) localStorage.setItem("rff_verify_v1_bak", JSON.stringify(verifyData));
+    } catch (e) {}
+  }, [verifyData]);
+  // ONE dataset for every tab, so a Verification correction reaches the City 55%, True 55%
+  // and rank tabs alike instead of only the rank tabs. Where a Verification cell is empty
+  // the sourced figure is used, so an unfilled tracker changes nothing.
+  const sharedDataset = useMemo(() => verifiedDataset(verifyData, { post2017: hiredPost2017 }), [verifyData, hiredPost2017]);
+  const dataDiff = useMemo(() => verifiedDiff(verifyData), [verifyData]);
   function toggleAgency(name) { setAgenciesOn(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; }); }
   function resetAgencies() { setAgenciesOn(new Set(COMPARABLE_NAMES)); }
   const allAgenciesOn = COMPARABLE_NAMES.every(n => agenciesOn.has(n));
@@ -428,8 +457,8 @@ export default function ComparisonTool() {
       operationalPct: (parseFloat(rsvOperationalPct) || 0) / 100,
       longevityPct: rsvLongevityOverride,
     };
-    return buildAgencies(overrides, agenciesOnArr);
-  }, [raises, rsvOperationalPct, agenciesOnArr, rsvLongevityOverride]);
+    return buildAgencies(overrides, agenciesOnArr, sharedDataset);
+  }, [raises, rsvOperationalPct, agenciesOnArr, rsvLongevityOverride, sharedDataset]);
 
   // Roseville's LIVE base, after whatever is typed into the City 55% tab's raise editor
   // (2028 LMA lever included). The Cost of Employee and OT Savings tabs read TC_BASE, so
@@ -445,8 +474,8 @@ export default function ComparisonTool() {
       operationalPct: (parseFloat(rsvOperationalPct) || 0) / 100,
       longevityPct: rsvLongevityOverride,
     };
-    return buildAgencies(overrides, agenciesOnArr);
-  }, [raises, rsvOperationalPct, agenciesOnArr, rsvLongevityOverride]);
+    return buildAgencies(overrides, agenciesOnArr, sharedDataset);
+  }, [raises, rsvOperationalPct, agenciesOnArr, rsvLongevityOverride, sharedDataset]);
 
   const rsvAgency         = allAgencies.find(a => a.highlight);
   const percentileRow     = allAgencies.find(a => a.isPercentile);
@@ -582,19 +611,23 @@ export default function ComparisonTool() {
     // City LMA: zero every comparison agency's Special Ops (Roseville keeps its own).
     if (cityOpsMode) COMPARABLE_NAMES.forEach(nm => { out[nm] = { ...(out[nm] || {}), specialPct: 0 }; });
     out["City of Roseville"] = { ...(out["City of Roseville"] || {}), specialPct: (parseFloat(rsvOperationalPct) || 0) / 100 };
-    if (persMode) out["City of Roseville"].longevityPct = 0; // Roseville FF longevity = non-PERSable service-term bonus
+    // Roseville service pay is non-pensionable ONLY for members hired on or after
+    // 1/1/2017 (Art. IX Service Term Bonus, excluded from special comp by Art. XI).
+    // A pre-2017 hire draws Art. VIII Longevity, which IS pensionable - zeroing it for
+    // everyone was wrong.
+    if (persMode && hiredPost2017) out["City of Roseville"].longevityPct = 0;
     return out;
-  }, [trueEdits, rsvOperationalPct, persMode, cityOpsMode]);
+  }, [trueEdits, rsvOperationalPct, persMode, cityOpsMode, hiredPost2017]);
   const enabledArr = useMemo(() => COMP_KEYS.filter(k => enabledCols.has(k)), [enabledCols]);
   const effEnabledArr = persMode ? PERS_KEYS : enabledArr;
   const effEnabledSet = persMode ? new Set(PERS_KEYS) : enabledCols;
-  const trueRows = useMemo(() => buildTrueComp(raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr), [raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr]);
+  const trueRows = useMemo(() => buildTrueComp(raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr, sharedDataset), [raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr, sharedDataset]);
   const rsvLongevityDefault = String(trueRows.find(r => r.highlight)?._longevityPctDefault ?? 2.5);
   const trueRsv  = trueRows.find(r => r.highlight);
   const truePct  = trueRows.find(r => r.isPercentile);
   const trueGap  = (trueRsv && truePct) ? trueRsv.tc_monthlyGross - truePct.tc_monthlyGross : null;
   const hasTrueEdits = Object.keys(trueEditsDecimal).length > 0;
-  const trueRaiseNeeded = useMemo(() => solveTrueRaise(raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr), [raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr]);
+  const trueRaiseNeeded = useMemo(() => solveTrueRaise(raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr, sharedDataset), [raises, trueEditsDecimal, effEnabledArr, cellEdits, agenciesOnArr, sharedDataset]);
   const raiseLabel = (v) => v == null ? "\u2014" : Math.abs(v) < 0.005 ? "At 55th \u2713" : v > 0 ? `+${v.toFixed(2)}%` : `${Math.abs(v).toFixed(2)}% above \u2713`;
   const persTopPct = trueRaiseNeeded?.pct;
   const persTopColor = persTopPct == null ? C.textDim : persTopPct > 0.005 ? C.danger : C.green;
@@ -623,23 +656,6 @@ export default function ComparisonTool() {
   function resetTrueEdits() { setTrueEdits({}); setCityOpsMode(false); } // also restores comparables' Special Ops
 
   // ---- MOU Verification Tracker (persists to localStorage; export/import for safety) ----
-  const [verifyData, setVerifyData] = useState(() => {
-    try {
-      const main = JSON.parse(localStorage.getItem("rff_verify_v1") || "{}");
-      if (main && Object.keys(main).length) return main;
-      // main is empty — recover from the auto-backup if one exists
-      const bak = JSON.parse(localStorage.getItem("rff_verify_v1_bak") || "{}");
-      return (bak && Object.keys(bak).length) ? bak : {};
-    } catch (e) { return {}; }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem("rff_verify_v1", JSON.stringify(verifyData));
-      // keep a redundant backup, but ONLY when there is real data, so an accidental
-      // empty never overwrites the last good copy
-      if (verifyData && Object.keys(verifyData).length) localStorage.setItem("rff_verify_v1_bak", JSON.stringify(verifyData));
-    } catch (e) {}
-  }, [verifyData]);
   const [verifyMeta, setVerifyMeta] = useState(() => { try { return JSON.parse(localStorage.getItem("rff_verify_meta") || "{}"); } catch (e) { return {}; } });
   const [strategies, setStrategies] = useState(() => { try { return localStorage.getItem("rff_strategies") || ""; } catch (e) { return ""; } });
   useEffect(() => { try { localStorage.setItem("rff_strategies", strategies); } catch (e) {} }, [strategies]);
@@ -717,6 +733,14 @@ export default function ComparisonTool() {
               </select>
             </div>
             <div className="live"><span className="dot" /> LIVE · 2028 LMA</div>
+            <div title="Roseville's service pay is gated on a 1/1/2017 hire date, not on PEPRA. Before: Art. VIII Longevity, pensionable, 7.5% at 20 years. On/after: Art. IX Service Term Bonus, excluded from CalPERS special compensation by Art. XI, capped at 5.0%." style={{ display:"inline-flex", alignItems:"center", gap:"4px", marginLeft:"8px", padding:"2px 4px", border:`1px solid ${C.border}`, borderRadius:"7px" }}>
+              <span style={{ fontSize:"9.5px", color:C.textDim, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.3px", paddingLeft:"3px" }}>Hired</span>
+              {[["pre","before 2017",false],["post","2017 or later",true]].map(([k,lbl,val]) => (
+                <button key={k} onClick={() => setHiredPost2017(val)}
+                  style={{ background: hiredPost2017===val ? C.accent : "transparent", color: hiredPost2017===val ? "#fff" : C.textMuted,
+                           border:"none", borderRadius:"5px", cursor:"pointer", fontSize:"10.5px", fontWeight:700, padding:"3px 7px", whiteSpace:"nowrap" }}>{lbl}</button>
+              ))}
+            </div>
             <button onClick={() => setPersMode(p => !p)} title="Show only PERSable compensation (base+medic, ed, special ops, longevity, holiday)" style={{ background: persMode ? C.accent : "transparent", color: persMode ? "#fff" : C.textMuted, border: `1px solid ${persMode ? C.accent : C.border}`, borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: 700, padding: "4px 9px", marginLeft: "6px", letterSpacing: "0.3px", whiteSpace: "nowrap" }}>{persMode ? "\u2713 PERSable" : "PERSable"}</button>
             <button onClick={toggleAdmin} title={admin ? "Admin unlocked — click to lock" : "Unlock admin tools (PIN)"} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "14px", lineHeight: 1, color: admin ? C.accent : C.textDim, padding: "2px 4px", marginLeft: "4px" }}>{admin ? "\ud83d\udd13" : "\ud83d\udd12"}</button>
           </div>
@@ -1465,8 +1489,13 @@ export default function ComparisonTool() {
               // heals itself the moment a year button is used.
               const lKey = "longevity__" + yearsOn;
               const lSaved = saved[lKey];
+              const rsvTrack = ROSEVILLE_SERVICE_PAY[hiredPost2017 ? "post2017" : "pre2017"];
               if (lSaved !== undefined && lSaved !== "") {
                 cell.longevity = lSaved;
+              } else if (ag === "City of Roseville" && rsvTrack[yearsOn] !== undefined) {
+                // Art. VIII vs Art. IX - the two tracks agree at 10 and 15 years and
+                // diverge from the 20th (7.5% vs a 5.0% cap).
+                cell.longevity = rsvTrack[yearsOn];
               } else if (yearsOn !== 10) {
                 const yl = (RANK_LONGEVITY[yearsOn] || {})[ag];
                 if (yl !== undefined) cell.longevity = yl;
@@ -1484,7 +1513,7 @@ export default function ComparisonTool() {
             // agenciesOnArr, NOT null. Passing null made these tabs ignore the agency on/off
             // checkboxes entirely, so unchecking an agency moved the 55th percentile on the
             // City and True tabs but silently left it unchanged here.
-            const rows = buildRankComparison(rank, verifyData, eff, agenciesOnArr, raises, { classic: classicOn });
+            const rows = buildRankComparison(rank, verifyData, eff, agenciesOnArr, raises, { classic: classicOn, post2017: hiredPost2017 });
             const rsv = rows.find(r => r.highlight);
             const pct = rows.find(r => r.isPercentile);
             const comps = rows.filter(r => !r.highlight && !r.isPercentile).sort((a,b)=>b[METRIC]-a[METRIC]);
