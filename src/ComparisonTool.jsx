@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -636,6 +636,10 @@ export default function ComparisonTool() {
   // tabs always open on the contractual PEPRA basis. A sticky toggle that silently
   // changed every number between sessions is the kind of trap worth not building.
   const [classicPers, setClassicPers] = useState(false);
+  // Years of service for the longevity tier: 10 (contractual), 20 or 25. Independent of
+  // the Classic PERS toggle - both can be on at once. Like Classic, this is session-only
+  // and resets to 10 on load, because Year 10 is what MOU Ch.2 Art.I A(3) actually specifies.
+  const [rankYears, setRankYears] = useState(10);
   const setRankCell = (rank, agency, field, val) => setRankFill(p => ({ ...p, [rank]: { ...(p[rank]||{}), [agency]: { ...((p[rank]||{})[agency]||{}), [field]: val } } }));
   useEffect(() => { try { localStorage.setItem("rff_verify_meta", JSON.stringify(verifyMeta)); } catch (e) {} }, [verifyMeta]);
   const verifySummary = useMemo(() => verifiedSummary(verifyData, null), [verifyData]);
@@ -1433,12 +1437,21 @@ export default function ComparisonTool() {
             // so a stray edit can never blank out the rest of a row.
             const incMap = (RANK_INCENTIVES && RANK_INCENTIVES[rank]) || {};
             const RANK_FIELDS = ["medic","ed","special","longevity","deferred","other"];
+            // Years-of-service selector: offered on Engineer and Captain only.
+            const yearsAvail = (rank === "engineer" || rank === "captain");
+            const yearsOn = yearsAvail ? rankYears : 10;
             const eff = { [rank]: {} };
             Object.keys(AGENCY_RAW).forEach(ag => {
               const saved = (rankFill[rank]||{})[ag] || {};
               const seed = incMap[ag] || {};
               const cell = { base: (saved.base !== undefined && saved.base !== "") ? saved.base : (baseMap[ag] !== undefined ? String(baseMap[ag]) : "") };
               RANK_FIELDS.forEach(f => { cell[f] = (saved[f] !== undefined && saved[f] !== "") ? saved[f] : (seed[f] !== undefined ? seed[f] : ""); });
+              // At 20 or 25 years the longevity tier replaces the Year-10 seed. A value
+              // typed into the box still wins, so a manual override is never clobbered.
+              if (yearsOn !== 10 && !(saved.longevity !== undefined && saved.longevity !== "")) {
+                const yl = (RANK_LONGEVITY[yearsOn] || {})[ag];
+                if (yl !== undefined) cell.longevity = yl;
+              }
               eff[rank][ag] = cell;
             });
             // Classic mode is offered on Engineer and Captain only. The BC tab has no
@@ -1456,7 +1469,7 @@ export default function ComparisonTool() {
               { k:"medic", lbl:"Medic", rawkey:null },
               { k:"ed", lbl:"Education", rawkey:"tc_ed" },
               { k:"special", lbl:"Special Ops", rawkey:"tc_special" },
-              { k:"longevity", lbl:"Longevity", rawkey:"tc_longevity" },
+              { k:"longevity", lbl: yearsOn===10 ? "Longevity" : ("Longevity "+yearsOn+"yr"), rawkey:"tc_longevity" },
               // Both of these CAN differ by rank, so they are editable here rather than
               // inherited: Vacaville pays Fire Captains 2% deferred vs 1% for everyone else,
               // and its $100/mo C.E. pay names Firefighter/Paramedics and Fire
@@ -1527,7 +1540,7 @@ export default function ComparisonTool() {
               <div className="wrap">
                 <div className="sec-head fade">
                   <div className="sec-tag">Private</div>
-                  <div className="sec-title">{rankLabel} — True Total Comp{classicOn ? " (Classic PERS)" : ""}</div>
+                  <div className="sec-title">{rankLabel} — True Total Comp{yearsOn!==10 ? " @ "+yearsOn+" yrs" : ""}{classicOn ? " (Classic PERS)" : ""}</div>
                   <div className="sec-sub">Full 55th-percentile comparison for {rankLabel}, every category shown. The seven yellow inputs are rank-specific and are all PRE-FILLED from the MOUs and salary schedules as of 11/10/2026. Medical, dental/vision, LTD, SS/Medicare, PERS, uniforms, holiday, vacation, sick and RHS are inherited from the Verification tab (falling back to the sourced figure) and re-applied to this rank's base. Raises come from the City 55% tab — set them there, not here.</div>
                 </div>
 
@@ -1541,11 +1554,47 @@ export default function ComparisonTool() {
                                border:`1.5px solid ${classicOn ? C.accent : C.border}`, fontWeight:800, padding:"7px 14px", cursor:"pointer" }}>
                       {classicOn ? "\u25C9 Classic PERS \u2014 ON" : "\u25CB Show as Classic PERS"}
                     </button>
+                    <span style={{ width:"1px", height:"22px", background:C.border }} />
+                    <span style={{ fontSize:"11px", color:C.textDim, fontWeight:700 }}>Longevity at</span>
+                    {[10,20,25].map(y => (
+                      <button key={y} onClick={() => setRankYears(y)} className="chip"
+                        title={y===10 ? "Year 10 - the tier MOU Ch.2 Art.I A(3) actually specifies. This is the contractual basis."
+                                      : "Show every agency's longevity at "+y+" years of service. Longevity only - vacation and sick accrual are NOT adjusted."}
+                        style={{ background: yearsOn===y ? C.percentile : C.card, color: yearsOn===y ? "#fff" : C.textMuted,
+                                 border:`1.5px solid ${yearsOn===y ? C.percentile : C.border}`, fontWeight:800, padding:"7px 12px", cursor:"pointer" }}>
+                        {y} yr{y===10 ? " \u00b7 contract" : ""}
+                      </button>
+                    ))}
                     <span style={{ fontSize:"11.5px", color: classicOn ? C.accent : C.textDim, fontWeight: classicOn?700:400 }}>
                       {classicOn
                         ? `Employee PERS now per-agency from each MOU \u2014 Roseville ${(CLASSIC_PERS["City of Roseville"]*100).toFixed(0)}%`
                         : "Showing PEPRA rates (the contractual basis)"}
                     </span>
+                  </div>
+                )}
+
+                {yearsOn!==10 && (
+                  <div className="fade" style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>
+                    <div style={{ fontWeight:800, color:C.percentile, marginBottom:"4px" }}>LONGEVITY AT {yearsOn} YEARS &mdash; not the contract comparison</div>
+                    <div>Only the <strong>Longevity</strong> column changes. Every schedule below was read from MOU text on 11/10/2026 except where noted:</div>
+                    <div style={{ marginTop:"7px", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(250px,1fr))", gap:"2px 18px" }}>
+                      {rows.filter(r=>!r.isPercentile).map(r=>{
+                        const v = (RANK_LONGEVITY[yearsOn]||{})[r.name];
+                        const unsourced = RANK_LONGEVITY_UNSOURCED.indexOf(r.name)!==-1;
+                        const y10 = ((RANK_INCENTIVES[rank]||{})[r.name]||{}).longevity;
+                        const isFlat = v!==undefined && parseFloat(v) > 50;
+                        const fmtv = (x)=> x===undefined ? "\u2014" : (parseFloat(x)===0 ? "none" : (parseFloat(x)>50 ? "$"+x+"/mo" : x+"%"));
+                        return (
+                          <div key={r.name} style={{ fontSize:"11px", color: unsourced ? C.danger : (r.highlight?C.gold:C.textMuted), fontWeight: (r.highlight||unsourced)?800:400 }}>
+                            <span style={{ display:"inline-block", minWidth:"108px" }}>{r.shortName}</span>
+                            {fmtv(y10)} &rarr; <strong>{fmtv(v)}</strong>{unsourced ? "  (Abram\u2019s figure, not in the MOU)" : ""}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ marginTop:"7px" }}><strong>Vacation and sick accrual are NOT adjusted.</strong> Those also rise with service at most agencies and still carry their Verification-tab values here, so this view understates a senior employee&rsquo;s true total comp at every agency &mdash; unevenly, since accrual schedules differ. Longevity is the only variable moved.</div>
+                    <div style={{ marginTop:"6px", color:C.danger, fontWeight:700 }}>Sacramento Metro&rsquo;s longevity is the one figure here with no document behind it. Art. 50 is unreadable in every published copy of their MOU, so this is Abram&rsquo;s own research. Its 2% at Year 10 does match the Firefighter tab, which supports the rest of the schedule &mdash; but at 25 years Metro&rsquo;s 12% is the richest longevity in the field, so confirm it before relying on it.</div>
+                    <div style={{ marginTop:"6px", color:C.textDim }}>The contractual element is Year 10. MOU Ch.2 Art.I A(3) lists &ldquo;Longevity Pay (Year 10).&rdquo; Switch back to <strong>10 yr &middot; contract</strong> before quoting a 55th-percentile result.</div>
                   </div>
                 )}
 
@@ -1567,7 +1616,7 @@ export default function ComparisonTool() {
 
                 <div className="fade" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(230px,1fr))", gap:"14px", marginBottom:"20px", maxWidth:"500px" }}>
                   <div style={{ background: classicOn ? `linear-gradient(180deg, rgba(37,99,168,0.10), ${C.bg})` : `linear-gradient(180deg, rgba(154,118,54,0.10), ${C.bg})`, border:`1px solid ${classicOn ? C.accent : C.gold}`, borderRadius:"12px", padding:"18px 20px" }}>
-                    <div style={{ fontSize:"13px", fontWeight:700, color: classicOn ? C.accent : C.gold }}>Roseville {rankLabel} vs 55th{classicOn ? " \u2014 Classic" : ""}</div>
+                    <div style={{ fontSize:"13px", fontWeight:700, color: classicOn ? C.accent : C.gold }}>Roseville {rankLabel} vs 55th{yearsOn!==10 ? " \u00b7 "+yearsOn+"yr" : ""}{classicOn ? " \u00b7 Classic" : ""}</div>
                     <div style={{ fontFamily:"'Inter',system-ui,sans-serif", fontWeight:700, fontSize:"34px", whiteSpace:"nowrap", color: gap==null?C.textDim:gap<-0.005?C.danger:C.green, marginTop:"4px" }}>{gap==null?"—":(gap>=0?"+":"")+gap.toFixed(2)+"%"}</div>
                     <div style={{ fontSize:"12px", color:C.textMuted, marginTop:"2px" }}>{fmtM(rsv&&rsv.tc_monthlyGross)}/mo vs {fmtM(pct&&pct.tc_monthlyGross)}</div>
                   </div>

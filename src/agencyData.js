@@ -88,6 +88,76 @@ export const ROSE_RANK_RATIO = { engineer: 1.075, captain: 1.075 * 1.10 };
 // Each rate is the TOTAL the employee pays toward CalPERS - member contribution plus any
 // cost-share toward the employer's contribution - because that is the employee's actual
 // out-of-pocket, which is what the comparison measures.
+// ── LONGEVITY BY YEARS OF SERVICE (Engineer and Captain tabs only) ──────
+// The contractual element is YEAR 10 - Ch.2 Art.I A(3) lists "Longevity Pay (Year 10)".
+// Those Year-10 figures live in RANK_INCENTIVES and are the default. This table only
+// holds the 20- and 25-year tiers, so the two can never drift apart.
+// Every schedule read from MOU text on 11/10/2026. Values in each agency's native unit.
+export const RANK_LONGEVITY = {
+  20: {
+    // Art. VIII: "Beginning of 10th year to completion of 14th year 2.5% ... Beginning of
+    // 15th year to completion of 19th year 5.0% ... Beginning of 20th year and every year
+    // thereafter 7.5% of base hourly rate." Applies to employees hired before 1/1/2017 -
+    // a 20-year employee at the 9/1/2027 survey date was hired ~2007, so Art. VIII governs.
+    // (Art. IX Service Term Bonus covers post-2017 hires and caps at 5.0%, but those
+    // employees cannot reach 20 years until 2037, so it is moot here.)
+    "City of Roseville":     "7.5",
+    // No longevity provision anywhere in the MOU - zero occurrences of the word.
+    "City of Vacaville":     "0",
+    // SUPPLIED BY ABRAM, 11/10/2026, from his own prior research - NOT from the MOU.
+    // Art. 50 LONGEVITY PAY is in the table of contents but the extractable text of every
+    // published copy of the Local 522 MOU stops around Article 32, so this cannot be
+    // confirmed against the document. His full schedule: 2% at 10 yr, 4% at 15, 6% at 17,
+    // 9% at 20, 12% at 25. The 2% at 10 years matches the figure already carried on the
+    // Firefighter tab, which independently supports the rest of the schedule.
+    // At 25 years Metro's 12% is the richest longevity in the field - worth a second look
+    // before it is relied on, because it is the one number here with no document behind it.
+    "Sacramento Metro Fire": "9",
+    // No longevity provision. The only occurrence of "longevity" is the title of a 2000
+    // Johnson & Associates survey chart, not a Fairfield pay provision.
+    "City of Fairfield":     "0",
+    // Sec. 5.11.1, not cumulative: 3.5% at 10 yrs, 5.5% at 15, 7.5% at 18, 9.5% at 21.
+    // A 20-year employee sits in the 18-year tier.
+    "Cosumnes CSD":          "7.5",
+    // Art. VII.L annual schedule: 5 yrs $3,000 / 10 $3,500 / 15 $4,000 / 20 $4,500 /
+    // 25 $5,000. $4,500/yr = $375.00/mo.
+    "El Dorado Hills Fire":  "375",
+    // Sec. 5: 2.5% after 10 yrs, additional 2.5% after 15, additional 2.5% after 20,
+    // "shall not exceed a total of 7 1/2% per month for an employee with twenty or more
+    // years of full-time City service."
+    "City of Folsom":        "7.5",
+    // Art. 8, single tier: "Employees will receive longevity pay after completing twenty
+    // (20) years of service with the Fire Department in the amount of two and one-half
+    // percent (2.5%)." Nothing at all before 20 years - this is $0 at Year 10.
+    "City of Rocklin":       "2.5",
+    // Sec. 7.7: "Employees who have completed seventeen (17) years of City Service
+    // Seniority shall receive longevity pay in the amount of three percent (3%)."
+    // $0 at Year 10 because the threshold is 17 years. Sec. 7.8 City Charter longevity
+    // ($100/yr at 20 years) is EXCLUDED - the MOU itself states "Longevity Pay in Article
+    // 7.8 is provided for in the City Charter and not through this Agreement," and at
+    // $8.33/mo it is immaterial.
+    "City of Sacramento":    "3",
+  },
+  25: {
+    "City of Roseville":     "7.5",  // 20th year and every year thereafter
+    "City of Vacaville":     "0",
+    "Sacramento Metro Fire": "12",   // Abram, 11/10/2026 - see the Year-20 note above
+    "City of Fairfield":     "0",
+    "Cosumnes CSD":          "9.5",  // 21-year tier, Sec. 5.11.1
+    "El Dorado Hills Fire":  "416.67", // $5,000/yr at 25 yrs, Art. VII.L
+    "City of Folsom":        "7.5",  // capped at 7.5% from 20 years on
+    "City of Rocklin":       "2.5",  // single tier, no increase after 20
+    "City of Sacramento":    "3",    // Sec. 7.7 flat 3%; Charter $300/yr excluded as above
+  },
+};
+// Longevity figures that come from Abram rather than from MOU text - rendered in red on
+// the tab so the distinction never gets lost. Sac Metro's Art. 50 is unreadable in every
+// published copy of their MOU; these are his own research figures.
+export const RANK_LONGEVITY_UNSOURCED = ["Sacramento Metro Fire"];
+// Abram's full Sac Metro schedule, kept here so a future session has it even if the tab
+// only shows the three years the tool models.
+export const SAC_METRO_LONGEVITY_ABRAM = { 10:"2", 15:"4", 17:"6", 20:"9", 25:"12" };
+
 export const CLASSIC_PERS = {
   // Ch.5 Art.I A.1.a: "CalPERS classic safety employees represented by RFF will pay
   // nine (9%) of compensation earnable as the employee's portion of the contribution
@@ -247,8 +317,8 @@ export const RANK_INCENTIVES = {
 // Things a reader of the Engineer/Captain tabs should know before quoting a number.
 // These are the honest soft spots - not errors, but places the MOU text runs out.
 export const RANK_OPEN_ITEMS = [
-  { ag:"Sac Metro", item:"Longevity 2% and Deferred $0 could not be re-verified for ANY rank",
-    detail:"Articles 46 (Deferred Compensation) and 50 (Longevity Pay) appear in the table of contents of every published copy of the Local 522 MOU, but the extractable text of each copy stops before Article 37. These two values are carried over from the Firefighter tab unchanged. The Firefighter tab's own “confirm vs 2023–24” flag on longevity still stands." },
+  { ag:"Sac Metro", item:"Longevity comes from Abram, not the MOU; Deferred $0 is still unverified",
+    detail:"Articles 46 (Deferred Compensation) and 50 (Longevity Pay) appear in the table of contents of every published copy of the Local 522 MOU, but the extractable text of each copy stops around Article 32. LONGEVITY: Abram supplied the full schedule on 11/10/2026 from his own research \u2014 2% at 10 yr, 4% at 15, 6% at 17, 9% at 20, 12% at 25. The 2% at 10 years matches the figure already carried on the Firefighter tab, which independently supports the rest and clears that tab's old \u201cconfirm vs 2023\u201324\u201d flag. It is still not document-sourced, and at 25 years Metro's 12% is the richest longevity in the field \u2014 confirm it before relying on it. DEFERRED COMP remains unverified for every rank, Firefighter included: $0 is an assumption, not a reading." },
   { ag:"Sac Metro", item:"IGT allowance $375/mo is a judgment call, not a quote",
     detail:"Art. 11 §C tiers the Medicare-reimbursement allowance as “Firefighters, EMTs and Paramedics – $4500” vs “All other 522 members – $3000.” Engineer and Captain are never named. Because Art. 14 §A requires every member hired after 7/1/2000 to hold an EMT-1 certificate, I read “All other 522 members” as the non-suppression classes and loaded $4,500/yr = $375/mo for both ranks, same as Firefighter. The literal reading would be $3,000/yr = $250/mo. The swing is $125/mo per rank. Ask Metro what Engineers and Captains were actually paid. Note also the IGT is a one-time, non-PERSable, revenue-contingent lump sum — $375/mo is an annualization." },
   { ag:"Sac Metro", item:"Metro's own hours divisor is 2,920, not 2,912",
