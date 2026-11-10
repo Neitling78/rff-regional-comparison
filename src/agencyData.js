@@ -94,6 +94,29 @@ export const ROSE_RANK_RATIO = { engineer: 1.075, captain: 1.075 * 1.10 };
 // holds the 20- and 25-year tiers, so the two can never drift apart.
 // Every schedule read from MOU text on 11/10/2026. Values in each agency's native unit.
 export const RANK_LONGEVITY = {
+  15: {
+    // Art. VIII: "Beginning of 15th year to completion of 19th year 5.0% of base hourly
+    // rate." (Art. IX Service Term Bonus gives post-1/1/2017 hires the same 5.0% from the
+    // 15th year, so both tracks agree at 15 - no hire-date ambiguity here.)
+    "City of Roseville":     "5",
+    "City of Vacaville":     "0",     // no longevity provision in the MOU
+    // Abram, 11/10/2026: 2% at 10 yr, 4% at 15, 6% at 17, 9% at 20, 12% at 25.
+    // Not in the MOU - Art. 50 is unreadable in every published copy.
+    "Sacramento Metro Fire": "4",
+    "City of Fairfield":     "0",     // no longevity provision in the MOU
+    // Sec. 5.11.1, not cumulative: "Five and one-half percent (5.5%) of base salary after
+    // fifteen (15) years of continuous service to the District."
+    "Cosumnes CSD":          "5.5",
+    // Art. VII.L: 15 years = $4,000/yr = $333.33/mo.
+    "El Dorado Hills Fire":  "333.33",
+    // Sec. 5: "2 1/2% After 10 years ... Additional 2 1/2% After 15 years" = 5.0% at 15.
+    "City of Folsom":        "5",
+    // Art. 8 pays nothing until 20 years of service - still $0 at 15.
+    "City of Rocklin":       "0",
+    // Sec. 7.7's threshold is SEVENTEEN years, so a 15-year employee gets nothing.
+    // Sec. 7.8 Charter longevity starts at 20 years. Both $0 here.
+    "City of Sacramento":    "0",
+  },
   20: {
     // Art. VIII: "Beginning of 10th year to completion of 14th year 2.5% ... Beginning of
     // 15th year to completion of 19th year 5.0% ... Beginning of 20th year and every year

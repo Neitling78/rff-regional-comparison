@@ -1556,12 +1556,12 @@ export default function ComparisonTool() {
                     </button>
                     <span style={{ width:"1px", height:"22px", background:C.border }} />
                     <span style={{ fontSize:"11px", color:C.textDim, fontWeight:700 }}>Longevity at</span>
-                    {[10,20,25].map(y => (
+                    {[10,15,20,25].map(y => (
                       <button key={y} onClick={() => setRankYears(y)} className="chip"
                         title={y===10 ? "Year 10 - the tier MOU Ch.2 Art.I A(3) actually specifies. This is the contractual basis."
                                       : "Show every agency's longevity at "+y+" years of service. Longevity only - vacation and sick accrual are NOT adjusted."}
                         style={{ background: yearsOn===y ? C.percentile : C.card, color: yearsOn===y ? "#fff" : C.textMuted,
-                                 border:`1.5px solid ${yearsOn===y ? C.percentile : C.border}`, fontWeight:800, padding:"7px 12px", cursor:"pointer" }}>
+                                 border:`1.5px solid ${yearsOn===y ? C.percentile : C.border}`, fontWeight:800, padding:"7px 10px", cursor:"pointer" }}>
                         {y} yr{y===10 ? " \u00b7 contract" : ""}
                       </button>
                     ))}

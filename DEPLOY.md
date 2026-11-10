@@ -38,10 +38,10 @@ ls -la ~/Development/rff-regional-comparison/src/
 md5 ~/Development/rff-regional-comparison/src/agencyData.js ~/Development/rff-regional-comparison/src/ComparisonTool.jsx
 ```
 
-Current build (2026-11-10, Classic PERS + 10/20/25-year longevity selector):
+Current build (2026-11-10, Classic PERS + 10/15/20/25-year longevity selector):
 ```
-agencyData.js       ebe11af2bbda354dc7b09214624edac6   117131 bytes
-ComparisonTool.jsx  0304918b3f12b0e7a11c77a34dd17706   212037 bytes
+agencyData.js       07d6f28e17958c756bd76417216d81aa   118471 bytes
+ComparisonTool.jsx  69d0b7403eb1a7eefb238e553ebddd99   212040 bytes
 ```
 Previous build, also good (pre-Classic, = snapshots/2026-11-10-verified):
 ```
