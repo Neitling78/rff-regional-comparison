@@ -398,6 +398,11 @@ export default function ComparisonTool() {
     return () => window.removeEventListener("keydown", onKey);
   }, [note]);
 
+  // Switching tabs keeps the old scroll position, which drops you into the middle of the
+  // new tab - and anything already scrolled past never fades in, so its heading stays
+  // invisible. Go back to the top on every tab change.
+  useEffect(() => { try { window.scrollTo(0, 0); } catch (e) {} }, [activeMethodology]);
+
   // Fade-in on scroll
   useEffect(() => {
     const els = document.querySelectorAll(".rff-root .fade");
@@ -1476,7 +1481,10 @@ export default function ComparisonTool() {
             // Which figure the total column and the 55th percentile run on.
             const METRIC = pensOn ? "tc_pensionable" : "tc_monthlyGross";
             const PENS_SET = new Set(PENSIONABLE_KEYS);
-            const rows = buildRankComparison(rank, verifyData, eff, null, raises, { classic: classicOn });
+            // agenciesOnArr, NOT null. Passing null made these tabs ignore the agency on/off
+            // checkboxes entirely, so unchecking an agency moved the 55th percentile on the
+            // City and True tabs but silently left it unchanged here.
+            const rows = buildRankComparison(rank, verifyData, eff, agenciesOnArr, raises, { classic: classicOn });
             const rsv = rows.find(r => r.highlight);
             const pct = rows.find(r => r.isPercentile);
             const comps = rows.filter(r => !r.highlight && !r.isPercentile).sort((a,b)=>b[METRIC]-a[METRIC]);
@@ -1485,6 +1493,13 @@ export default function ComparisonTool() {
             const altKey = pensOn ? "tc_monthlyGross" : "tc_pensionable";
             const altGap = (rsv && pct && pct[altKey]) ? (rsv[altKey]/pct[altKey] - 1)*100 : null;
             const incompleteCount = rows.filter(r=>!r.isPercentile && r._missing && r._missing.length).length;
+            // A rank tab is only usable when Roseville has a base AND enough comparables do.
+            // Without this guard the BC tab published a confident "-85.89%" built on a
+            // Roseville row with no salary data at all and a percentile taken from whichever
+            // agencies happened to have a base. A wrong headline is worse than no headline.
+            const noBase = (r) => (r._missing || []).includes("base");
+            const compsWithBase = rows.filter(r => !r.isPercentile && !r.highlight && !noBase(r)).length;
+            const dataReady = !!rsv && !noBase(rsv) && compsWithBase >= 5;
             const EDIT_COLS = [
               { k:"base", lbl:"Base $/hr", rawkey:null },
               { k:"medic", lbl:"Medic", rawkey:null },
@@ -1553,7 +1568,7 @@ export default function ComparisonTool() {
                     const counts = !pensOn || PENS_SET.has(c.k) || (c.k==="tc_uniforms" && classicOn);
                     return <td key={c.k} style={{ padding:"6px 7px", textAlign:"right", whiteSpace:"nowrap", opacity: counts?1:0.32, textDecoration: counts?"none":"line-through", color: blank?C.textDim:C.textMuted, fontStyle: blank?"italic":"normal" }}>{isPct && val==null ? "—" : fmtD(val)}</td>;
                   })}
-                  <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:800, color: isR?C.gold:isPct?C.percentile:C.text, whiteSpace:"nowrap" }}>{fmtM(r[METRIC])}</td>
+                  <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:800, color: isR?C.gold:isPct?C.percentile:C.text, whiteSpace:"nowrap" }}>{(!dataReady && (isPct || isR)) ? "\u2014" : fmtM(r[METRIC])}</td>
                   <td style={{ padding:"6px 8px", textAlign:"center", fontSize:"10px", color: miss.length?C.danger:C.green, fontWeight:700 }}>{isPct?"":(miss.length?miss.length+" blank":"✓")}</td>
                 </tr>
               );
@@ -1663,6 +1678,16 @@ export default function ComparisonTool() {
                   </div>
                 )}
 
+                {!dataReady && (
+                  <div style={{ fontSize:"13px", lineHeight:1.7, color:C.text, marginBottom:"18px", padding:"16px 18px", background:"rgba(168,30,30,0.07)", border:`2px solid ${C.danger}`, borderRadius:"12px", maxWidth:"760px" }}>
+                    <div style={{ fontWeight:800, color:C.danger, fontSize:"15px", marginBottom:"6px" }}>No result for this rank &mdash; the data is not loaded</div>
+                    <div>{rsv && noBase(rsv) ? "Roseville has no base salary for this rank, so there is nothing to compare against. " : ""}
+                    {compsWithBase < 5 ? ("Only " + compsWithBase + " of 8 comparable agencies have a base rate loaded, which is too few for a meaningful 55th percentile. ") : ""}</div>
+                    <div style={{ marginTop:"6px", fontWeight:700 }}>The percentile and the gap are deliberately hidden rather than shown wrong. Fill the base rates in the yellow column and they will appear.</div>
+                  </div>
+                )}
+
+                {dataReady && (
                 <div className="fade" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(230px,1fr))", gap:"14px", marginBottom:"20px", maxWidth:"500px" }}>
                   <div style={{ background: classicOn ? `linear-gradient(180deg, rgba(37,99,168,0.10), ${C.bg})` : `linear-gradient(180deg, rgba(154,118,54,0.10), ${C.bg})`, border:`1px solid ${classicOn ? C.accent : C.gold}`, borderRadius:"12px", padding:"18px 20px" }}>
                     <div style={{ fontSize:"13px", fontWeight:700, color: classicOn ? C.accent : C.gold }}>Roseville {rankLabel} vs 55th{yearsOn!==10 ? " \u00b7 "+yearsOn+"yr" : ""}{classicOn ? " \u00b7 Classic" : ""}</div>
@@ -1677,6 +1702,7 @@ export default function ComparisonTool() {
                     )}
                   </div>
                 </div>
+                )}
 
                 {incompleteCount>0 && (
                   <div className="fade" style={{ fontSize:"12.5px", color:C.danger, fontWeight:600, marginBottom:"12px", padding:"10px 14px", background:"rgba(168,30,30,0.06)", border:`1px solid ${C.danger}`, borderRadius:"10px" }}>
