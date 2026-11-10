@@ -362,6 +362,18 @@ export default function ComparisonTool() {
   const [note, setNote] = useState(null);
   const [admin, setAdmin] = useState(() => { try { return localStorage.getItem("rff_admin") === "1"; } catch (e) { return false; } });
   const [persMode, setPersMode] = useState(false);
+  // Classic PERS mode: Engineer and Captain tabs only. Deliberately NOT persisted to
+  // localStorage and NOT carried in the URL - it resets to OFF on every load so these
+  // tabs always open on the contractual PEPRA basis. A sticky toggle that silently
+  // changed every number between sessions is the kind of trap worth not building.
+  const [classicPers, setClassicPers] = useState(false);
+  // Years of service for the longevity tier: 10 (contractual), 20 or 25. Independent of
+  // the Classic PERS toggle - both can be on at once. Like Classic, this is session-only
+  // and resets to 10 on load, because Year 10 is what MOU Ch.2 Art.I A(3) actually specifies.
+  const [rankYears, setRankYears] = useState(10);
+  // Pensionable-income view. Session-only like the others: the contractual comparison is
+  // total compensation, so this resets to OFF on every load.
+  const [pensMode, setPensMode] = useState(false);
   useEffect(() => { try { localStorage.setItem("rff_admin", admin ? "1" : "0"); } catch (e) {} }, [admin]);
   useEffect(() => { if (!admin && METHODOLOGIES.find(m => m.id === activeMethodology)?.private) setActiveMethodology("true55"); }, [admin, activeMethodology]);
   function toggleAdmin() {
@@ -395,7 +407,10 @@ export default function ComparisonTool() {
     );
     els.forEach(el => io.observe(el));
     return () => io.disconnect();
-  }, [activeMethodology]);
+    // Re-run when a rank toggle changes too. Toggling inserts new .fade blocks, and an
+    // element the observer never saw keeps opacity:0 while still occupying its full
+    // height - which reads as a large blank gap under the buttons.
+  }, [activeMethodology, classicPers, rankYears, pensMode]);
 
   // Roseville longevity is editable on both tabs; a set value overrides the City-method default too.
   const rsvLongevityOverride = (trueEdits["City of Roseville"]?.longevity !== undefined && trueEdits["City of Roseville"]?.longevity !== "")
@@ -631,18 +646,6 @@ export default function ComparisonTool() {
   useEffect(() => { try { localStorage.setItem("rff_ot", JSON.stringify(otParams)); } catch (e) {} }, [otParams]);
   const [rankFill, setRankFill] = useState(() => { try { return JSON.parse(localStorage.getItem("rff_rankfill") || "{}"); } catch (e) { return {}; } });
   useEffect(() => { try { localStorage.setItem("rff_rankfill", JSON.stringify(rankFill)); } catch (e) {} }, [rankFill]);
-  // Classic PERS mode: Engineer and Captain tabs only. Deliberately NOT persisted to
-  // localStorage and NOT carried in the URL - it resets to OFF on every load so these
-  // tabs always open on the contractual PEPRA basis. A sticky toggle that silently
-  // changed every number between sessions is the kind of trap worth not building.
-  const [classicPers, setClassicPers] = useState(false);
-  // Years of service for the longevity tier: 10 (contractual), 20 or 25. Independent of
-  // the Classic PERS toggle - both can be on at once. Like Classic, this is session-only
-  // and resets to 10 on load, because Year 10 is what MOU Ch.2 Art.I A(3) actually specifies.
-  const [rankYears, setRankYears] = useState(10);
-  // Pensionable-income view. Session-only like the others: the contractual comparison is
-  // total compensation, so this resets to OFF on every load.
-  const [pensMode, setPensMode] = useState(false);
   const setRankCell = (rank, agency, field, val) => setRankFill(p => ({ ...p, [rank]: { ...(p[rank]||{}), [agency]: { ...((p[rank]||{})[agency]||{}), [field]: val } } }));
   useEffect(() => { try { localStorage.setItem("rff_verify_meta", JSON.stringify(verifyMeta)); } catch (e) {} }, [verifyMeta]);
   const verifySummary = useMemo(() => verifiedSummary(verifyData, null), [verifyData]);
@@ -1593,7 +1596,7 @@ export default function ComparisonTool() {
                 )}
 
                 {yearsOn!==10 && (
-                  <div className="fade" style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>
+                  <div style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>
                     <div style={{ fontWeight:800, color:C.percentile, marginBottom:"4px" }}>LONGEVITY AT {yearsOn} YEARS &mdash; not the contract comparison</div>
                     <div>Only the <strong>Longevity</strong> column changes. Every schedule below was read from MOU text on 11/10/2026 except where noted:</div>
                     <div style={{ marginTop:"7px", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(250px,1fr))", gap:"2px 18px" }}>
@@ -1618,7 +1621,7 @@ export default function ComparisonTool() {
                 )}
 
                 {pensOn && (
-                  <div className="fade" style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>
+                  <div style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>
                     <div style={{ fontWeight:800, color:C.percentile, marginBottom:"4px" }}>PENSIONABLE INCOME ONLY &mdash; not the contract comparison</div>
                     <div><strong>Counted:</strong> base pay, paramedic/EMT pay, education, special assignment (hazmat, rescue), longevity, holiday pay{classicOn ? ", and uniform allowance" : ""}. <strong>Struck through in the table:</strong> deferred comp, vacation, sick, retiree health, medical, dental/vision, LTD, life, Social Security/Medicare, and the PERS contribution itself.</div>
                     <div style={{ marginTop:"6px" }}>Classic members run on CCR 571; PEPRA &ldquo;new members&rdquo; run on the separate exclusive list in CCR 571.1, which covers incentive pay for years of service, educational pay, special assignment pay and holiday pay. Among these columns the <strong>only Classic/PEPRA difference is the uniform allowance</strong> &mdash; CalPERS Circular Letter 200-064-17 lists it as not reportable for new members, and Vacaville Sec. 12.1 says so outright. It follows the Classic PERS button, currently <strong>{classicOn ? "ON, so uniform counts" : "OFF, so uniform is excluded"}</strong>.</div>
@@ -1637,7 +1640,7 @@ export default function ComparisonTool() {
                 )}
 
                 {classicOn && (
-                  <div className="fade" style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(37,99,168,0.07)", border:`1.5px solid ${C.accent}`, borderRadius:"10px" }}>
+                  <div style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(37,99,168,0.07)", border:`1.5px solid ${C.accent}`, borderRadius:"10px" }}>
                     <div style={{ fontWeight:800, color:C.accent, marginBottom:"4px" }}>CLASSIC PERS VIEW &mdash; not the contract comparison</div>
                     <div>Each agency&rsquo;s employee PERS contribution is replaced with its <strong>actual Classic-tier rate, read from that agency&rsquo;s MOU</strong> on 11/10/2026. Every other value on the tab is unchanged. The rates are not uniform &mdash; they run from 9% to 12%:</div>
                     <div style={{ marginTop:"7px", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(330px,1fr))", gap:"2px 18px" }}>
