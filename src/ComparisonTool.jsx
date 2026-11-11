@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact } from "./agencyData.js";
+import { useState, useMemo, useEffect, Fragment } from "react";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -203,8 +203,15 @@ const METHODOLOGIES = [
   { id: "total4yr",  label: "Total % 4yr", active: true, private: true },
   { id: "truecost",  label: "Cost of Employee", active: true, private: true },
   { id: "otvalue",   label: "OT Savings", active: true, private: true },
+  { id: "timebank",  label: "Time Bank", active: true, private: true },
+  { id: "flsaleave", label: "FLSA Leave", active: true, private: true },
   { id: "strategies",label: "Strategies", active: true, private: true },
 ];
+// Tabs that render their own content. A tab added to METHODOLOGIES but not listed
+// here falls through to the "reserved and not populated yet" placeholder, which is
+// exactly the bug the old hand-maintained !== chain kept producing.
+const BUILT_TABS = ["roseville","true55","strategies","total4yr","truecost","otvalue",
+  "engineer","captain","bc","timebank","flsaleave"];
 const EMPTY_VERIFY = Object.freeze({}); // Verification tab retired - see note at verifyData
 const ADMIN_PIN = "1592"; // change to any code; private tabs + all editing unlock with this PIN
 const PERS_KEYS = ["tc_ffMedicMonthly", "tc_ed", "tc_special", "tc_longevity", "tc_holiday"]; // PERSable components
@@ -230,6 +237,128 @@ function solveNeededRaise(roseville2027Str, roseville2028Str, targetGross, opera
     total: total2028 * 100,
     delta: (total2028 - e28) * 100,
   };
+}
+
+
+// ─── DOCUMENT RENDERING ──────────────────────────────────────────────────────
+// Shared by the Time Bank and FLSA Leave tabs. Both reproduce a source PDF held by
+// the E-Board; the content lives in agencyData.js and nothing is computed here.
+// Inline markup: **bold** and *italic*. Deliberately tiny — no HTML is injected.
+function inl(txt, key) {
+  if (txt == null) return null;
+  const out = []; let buf = ""; let i = 0; let n = 0;
+  const flush = () => { if (buf) { out.push(buf); buf = ""; } };
+  while (i < txt.length) {
+    if (txt[i] === "*" && txt[i + 1] === "*") {
+      const j = txt.indexOf("**", i + 2);
+      if (j > -1) { flush(); out.push(<strong key={(key||"i")+"b"+(n++)}>{txt.slice(i + 2, j)}</strong>); i = j + 2; continue; }
+    }
+    if (txt[i] === "*") {
+      const j = txt.indexOf("*", i + 1);
+      if (j > -1) { flush(); out.push(<em key={(key||"i")+"i"+(n++)}>{txt.slice(i + 1, j)}</em>); i = j + 1; continue; }
+    }
+    buf += txt[i]; i++;
+  }
+  flush();
+  return out;
+}
+
+const DOC_TONE = {
+  bad:   { bar: C.danger, bg: "rgba(168,30,30,0.06)",  head: C.danger },
+  gold:  { bar: C.gold,   bg: "rgba(151,114,47,0.08)", head: C.gold },
+  good:  { bar: C.green,  bg: "rgba(79,122,60,0.08)",  head: C.green },
+  plain: { bar: C.border, bg: "rgba(0,0,0,0.03)",      head: C.textMuted },
+};
+
+function DocCallout({ tone, title, body }) {
+  const t = DOC_TONE[tone] || DOC_TONE.plain;
+  return (
+    <div style={{ borderLeft: `3px solid ${t.bar}`, background: t.bg, padding: "12px 16px", margin: "14px 0", borderRadius: "0 4px 4px 0" }}>
+      {title && <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", color: t.head, marginBottom: "7px" }}>{title}</div>}
+      {body.map((b, i) => (
+        <div key={i} style={{ fontSize: "13px", lineHeight: 1.62, color: C.text, marginTop: i ? "8px" : 0 }}>{inl(b, "c" + i)}</div>
+      ))}
+    </div>
+  );
+}
+
+const docTh = { fontSize: "11px", fontWeight: 700, textAlign: "left", padding: "7px 10px", color: C.text, background: C.surface, borderBottom: `1.5px solid ${C.border2 || C.border}`, verticalAlign: "bottom" };
+const docTd = { fontSize: "12.5px", padding: "8px 10px", color: C.text, borderBottom: `1px solid ${C.border}`, verticalAlign: "top", lineHeight: 1.55 };
+
+function DocTable({ head, rows, num, rsvRow }) {
+  const isNum = (j) => Array.isArray(num) && num.indexOf(j) !== -1;
+  return (
+    <div style={{ overflowX: "auto", margin: "14px 0" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "480px" }}>
+        <thead><tr>{head.map((h, j) => (
+          <th key={j} style={{ ...docTh, textAlign: isNum(j) ? "right" : "left" }}>{inl(h, "th" + j)}</th>
+        ))}</tr></thead>
+        <tbody>{rows.map((r, i) => (
+          <tr key={i} style={rsvRow === i ? { background: "rgba(151,114,47,0.10)" } : undefined}>
+            {r.map((cell, j) => (
+              <td key={j} style={{ ...docTd, textAlign: isNum(j) ? "right" : "left", fontVariantNumeric: isNum(j) ? "tabular-nums" : "normal" }}>{inl(cell, "td" + i + "_" + j)}</td>
+            ))}
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function DocBlocks({ blocks }) {
+  return blocks.map((b, i) => {
+    if (b.t === "p")       return <div key={i} style={{ fontSize: "13.5px", lineHeight: 1.68, color: C.text, margin: "11px 0" }}>{inl(b.x, "p" + i)}</div>;
+    if (b.t === "h3")      return <div key={i} style={{ fontSize: "14px", fontWeight: 700, color: C.text, margin: "20px 0 4px" }}>{inl(b.x, "h" + i)}</div>;
+    if (b.t === "callout") return <DocCallout key={i} tone={b.tone} title={b.title} body={b.body} />;
+    if (b.t === "table")   return <DocTable key={i} head={b.head} rows={b.rows} num={b.num} rsvRow={b.rsvRow} />;
+    if (b.t === "quote")   return (
+      <div key={i} style={{ borderLeft: `2px solid ${C.border}`, paddingLeft: "14px", margin: "14px 0" }}>
+        <div style={{ fontSize: "13.5px", fontStyle: "italic", lineHeight: 1.65, color: C.textMuted }}>&ldquo;{b.q}&rdquo;</div>
+        {b.cite && <div style={{ fontSize: "11px", color: C.textDim, marginTop: "6px" }}>{b.cite}</div>}
+      </div>
+    );
+    if (b.t === "ol" || b.t === "ul") {
+      const Tag = b.t === "ol" ? "ol" : "ul";
+      return <Tag key={i} style={{ margin: "11px 0", paddingLeft: "22px" }}>
+        {b.items.map((it, j) => (
+          <li key={j} style={{ fontSize: "13.5px", lineHeight: 1.65, color: C.text, margin: "7px 0", paddingLeft: "3px" }}>{inl(it, "li" + i + "_" + j)}</li>
+        ))}
+      </Tag>;
+    }
+    return null;
+  });
+}
+
+// Confidential banner + title block shared by both document tabs.
+function DocHead({ doc }) {
+  return (
+    <>
+      <div style={{ display: "inline-block", background: C.danger, color: "#fff", fontSize: "10px", fontWeight: 800, letterSpacing: "0.1em", padding: "3px 9px", borderRadius: "2px", marginBottom: "12px" }}>{doc.confidential}</div>
+      <div className="sec-title" style={{ marginBottom: "6px" }}>{doc.title}</div>
+      <div className="sec-sub" style={{ maxWidth: "760px" }}>{doc.sub}</div>
+      <div style={{ height: "2px", background: C.text, margin: "14px 0 4px" }} />
+    </>
+  );
+}
+
+function DocFoot({ doc }) {
+  return (
+    <div style={{ marginTop: "28px", paddingTop: "14px", borderTop: `1px solid ${C.border}` }}>
+      <div style={{ fontSize: "11px", lineHeight: 1.6, color: C.textDim }}><strong style={{ color: C.textMuted }}>Sourcing.</strong> {doc.sourcing}</div>
+      <div style={{ fontSize: "11px", lineHeight: 1.6, color: C.textDim, marginTop: "7px" }}><strong style={{ color: C.textMuted }}>{doc.caveat.split(".")[0]}.</strong>{doc.caveat.slice(doc.caveat.indexOf(".") + 1)}</div>
+    </div>
+  );
+}
+
+// FLSA matrix cell: filled dot = counts, slashed circle = excluded, dash = n/a.
+function LeaveDot({ v }) {
+  if (v === "y") return <span title="Counts as hours worked" style={{ display: "inline-block", width: "9px", height: "9px", borderRadius: "50%", background: C.green }} />;
+  if (v === "n") return (
+    <span title="Does not count — expressly excluded" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "15px", height: "15px", borderRadius: "50%", border: `1.5px solid ${C.danger}`, position: "relative" }}>
+      <span style={{ position: "absolute", width: "11px", height: "1.5px", background: C.danger, transform: "rotate(-45deg)" }} />
+    </span>
+  );
+  return <span title="Not applicable" style={{ color: C.textDim, fontSize: "13px" }}>&ndash;</span>;
 }
 
 // ── SCOPED STYLESHEET (mission-control theme) ─────────────────────────────────
@@ -976,7 +1105,7 @@ export default function ComparisonTool() {
             </>
           )}
 
-          {activeMethodology !== "roseville" && activeMethodology !== "true55" && activeMethodology !== "verify" && activeMethodology !== "strategies" && activeMethodology !== "total4yr" && activeMethodology !== "truecost" && activeMethodology !== "otvalue" && activeMethodology !== "engineer" && activeMethodology !== "captain" && activeMethodology !== "bc" && (
+          {BUILT_TABS.indexOf(activeMethodology) === -1 && (
             <section>
               <div className="wrap">
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "70px 24px", textAlign: "center", background: C.card, borderRadius: "14px", border: `1px solid ${C.border}` }}>
@@ -988,6 +1117,112 @@ export default function ComparisonTool() {
                   <div style={{ marginTop: "20px", fontSize: "12px", color: C.textDim }}>
                     Switch back to <span style={{ color: C.accent, cursor: "pointer", fontWeight: "600" }} onClick={() => setActiveMethodology("roseville")}>Roseville Methodology</span> to use the live tool.
                   </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeMethodology === "timebank" && admin && (
+            <section style={{ marginTop: "0", paddingBottom: "12px" }}>
+              <div className="wrap">
+                <div className="sec-head">
+                  <div className="sec-tag">E-Board Brief</div>
+                  <DocHead doc={TIMEBANK_BRIEF} />
+                </div>
+                <div style={{ maxWidth: "860px" }}>
+                  {TIMEBANK_BRIEF.sections.map((sec, i) => (
+                    <div key={i} style={{ marginTop: i ? "30px" : "18px" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, marginBottom: "12px" }}>
+                        {sec.n}. {sec.h}
+                      </div>
+                      <DocBlocks blocks={sec.blocks} />
+                    </div>
+                  ))}
+                  <DocFoot doc={TIMEBANK_BRIEF} />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeMethodology === "flsaleave" && admin && (
+            <section style={{ marginTop: "0", paddingBottom: "12px" }}>
+              <div className="wrap">
+                <div className="sec-head">
+                  <div className="sec-tag">Leave Treatment</div>
+                  <DocHead doc={FLSA_LEAVE} />
+                </div>
+                <div style={{ maxWidth: "860px" }}>
+
+                  <div style={{ display: "flex", gap: "22px", flexWrap: "wrap", alignItems: "center", margin: "14px 0 18px", fontSize: "12px", color: C.text }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}><LeaveDot v="y" /> Counts as hours worked</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}><LeaveDot v="n" /> Does not count &mdash; expressly excluded</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}><LeaveDot v="-" /> Not applicable</span>
+                  </div>
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, marginBottom: "2px" }}>The breakdown</div>
+                  <div style={{ overflowX: "auto", margin: "12px 0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "620px" }}>
+                      <thead><tr>
+                        <th style={{ ...docTh, minWidth: "140px" }}>Agency</th>
+                        {FLSA_LEAVE.types.map(t => <th key={t} style={{ ...docTh, textAlign: "center" }}>{t}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {FLSA_LEAVE.groups.map((g, gi) => (
+                          <Fragment key={gi}>
+                            <tr><td colSpan={FLSA_LEAVE.types.length + 1} style={{ fontSize: "10.5px", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", color: C.textMuted, background: C.surface, padding: "6px 10px", borderBottom: `1px solid ${C.border}` }}>{g.label}</td></tr>
+                            {g.rows.map((r, ri) => (
+                              <tr key={ri} style={r.rsv ? { background: "rgba(151,114,47,0.10)" } : undefined}>
+                                <td style={{ ...docTd, fontWeight: 700, color: r.rsv ? C.gold : C.text }}>{r.a}</td>
+                                {r.c.map((v, ci) => (
+                                  <td key={ci} style={{ ...docTd, textAlign: "center" }}><LeaveDot v={v} /></td>
+                                ))}
+                              </tr>
+                            ))}
+                          </Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ fontSize: "11.5px", lineHeight: 1.6, color: C.textDim, marginBottom: "6px" }}>{FLSA_LEAVE.matrixNote}</div>
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "30px 0 12px" }}>What each MOU actually says</div>
+                  {FLSA_LEAVE.mou.map((m, i) => (
+                    <div key={i} style={{ margin: "14px 0", paddingLeft: m.rsv ? "11px" : 0, borderLeft: m.rsv ? `3px solid ${C.gold}` : "none" }}>
+                      <div style={{ fontSize: "13.5px", lineHeight: 1.65, color: C.text }}>
+                        <strong style={{ color: m.rsv ? C.gold : C.text }}>{m.a}</strong>{"  "}
+                        <span style={{ color: C.textMuted }}>{inl(m.cite, "mc" + i)}</span>
+                      </div>
+                      {m.q && (
+                        <div style={{ borderLeft: `2px solid ${C.border}`, paddingLeft: "13px", margin: "8px 0 0" }}>
+                          <div style={{ fontSize: "13px", fontStyle: "italic", lineHeight: 1.6, color: C.textMuted }}>&ldquo;{m.q}&rdquo;</div>
+                          {m.qcite && <div style={{ fontSize: "11px", color: C.textDim, marginTop: "4px" }}>{m.qcite}</div>}
+                        </div>
+                      )}
+                      {m.after && <div style={{ fontSize: "13px", lineHeight: 1.65, color: C.text, marginTop: "8px" }}>{inl(m.after, "ma" + i)}</div>}
+                    </div>
+                  ))}
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "30px 0 12px" }}>The second half &mdash; what overtime is paid at</div>
+                  <div style={{ fontSize: "13.5px", lineHeight: 1.68, color: C.text, margin: "11px 0" }}>{inl(FLSA_LEAVE.rateIntro, "ri")}</div>
+                  <div style={{ overflowX: "auto", margin: "12px 0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "480px" }}>
+                      <thead><tr>
+                        <th style={{ ...docTh, minWidth: "150px" }}>Agency</th>
+                        <th style={docTh}>Overtime is calculated on&hellip;</th>
+                      </tr></thead>
+                      <tbody>{FLSA_LEAVE.rates.map((r, i) => (
+                        <tr key={i} style={r.rsv ? { background: "rgba(151,114,47,0.10)" } : undefined}>
+                          <td style={{ ...docTd, fontWeight: r.rsv ? 700 : 400, color: r.rsv ? C.gold : C.text }}>{r.a}</td>
+                          <td style={docTd}>{inl(r.r, "rr" + i)}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "30px 0 12px" }}>Where this leaves us</div>
+                  {FLSA_LEAVE.closers.map((c, i) => <DocCallout key={i} tone={c.tone} body={c.body} />)}
+
+                  <DocFoot doc={FLSA_LEAVE} />
                 </div>
               </div>
             </section>

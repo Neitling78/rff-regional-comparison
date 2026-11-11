@@ -1052,3 +1052,211 @@ export const VERIFIED_LOCKED = {
   "City of Rocklin": ["tc_cityRHS","tc_deferred","tc_dv","tc_ed","tc_eeRHS","tc_ffMedicMonthly","tc_holiday","tc_life","tc_longevity","tc_ltd","tc_medical","tc_other","tc_pers","tc_sick","tc_special","tc_ssMed","tc_topStepHrly","tc_uniforms","tc_vacation"]
 };
 export const AGENCIES = buildAgencies();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FLSA LEAVE TREATMENT — nine Sacramento-region agencies
+// Reproduced from "Does Paid Leave Count Toward FLSA Overtime?" (IAFF Local 1592,
+// November 2026). CONFIDENTIAL. Content is faithful to that document; nothing has
+// been added, re-derived or re-verified here.
+// ─────────────────────────────────────────────────────────────────────────────
+export const FLSA_LEAVE = {
+  title: "Does Paid Leave Count Toward FLSA Overtime?",
+  sub: "Whether leave hours count toward the 182-hour threshold in a 24-day work period · nine Sacramento-region agencies · November 2026",
+  confidential: "CONFIDENTIAL — IAFF LOCAL 1592",
+  types: ["Vacation", "Sick", "Holiday", "CTO", "Union", "Jury", "Work Comp"],
+  groups: [
+    { label: "Leave counts — members keep full credit", tone: "good", rows: [
+      { a: "Rocklin",          c: ["y","y","y","y","y","y","y"] },
+      { a: "Sac Metro",        c: ["y","y","y","y","y","y","y"] },
+      { a: "El Dorado Hills",  c: ["y","y","y","y","y","y","y"] },
+      { a: "Vacaville",        c: ["y","y","y","y","y","y","y"] },
+      { a: "Fairfield",        c: ["y","y","y","y","y","y","y"] },
+    ]},
+    { label: "Leave counts, with exceptions", tone: "mid", rows: [
+      { a: "Sacramento City",  c: ["y","n","y","y","y","y","y"] },
+      { a: "Cosumnes",         c: ["y","y","n","n","y","y","n"] },
+    ]},
+    { label: "Leave does not count — members lose credit", tone: "bad", rows: [
+      { a: "Folsom",           c: ["n","n","-","n","n","n","n"] },
+      { a: "ROSEVILLE",        c: ["n","n","n","n","n","n","n"], rsv: true },
+    ]},
+  ],
+  matrixNote: "El Dorado Hills and Folsom holiday and CTO: EDH shift staff are shown as protected across the board because their holiday is paid as cash every pay period and there is no shift CTO program — there is no leave of that type to lose. Folsom's holiday works the same way, which is why it is the one cell in Folsom's row that is not an exclusion.",
+  mou: [
+    { a: "Rocklin", cite: "Sec. II Art. 5.A.1 — the simplest language in the region:",
+      q: "All time with the exception of overtime, will be used to reach the one hundred eighty-two (182) hour ceiling." },
+    { a: "Sac Metro", cite: "Art. 13.B, with Art. 13.E protecting sick leave specifically:",
+      q: "all paid leave will be considered ‘hours worked’ for purposes of determining overtime owed under this Agreement." },
+    { a: "El Dorado Hills", cite: "— **no hours-worked clause at all**, and it does not need one.",
+      after: "Art. VII.F.4 pays the premium for the **ten scheduled overtime hours** built into the 48/96 schedule **every pay period**, regardless of any leave taken, and Art. VII.F.5 adds an unconditional FLSA true-up. Holiday is 130 hours of cash spread across every paycheck (Art. X.A) and there is no shift CTO program, so no leave of any type can erode a member's position." },
+    { a: "Vacaville", cite: "§5.3 — but note this names *contractual* overtime; its FLSA treatment is silent:",
+      q: "Paid time off shall be counted as hours worked for contractual overtime calculation purposes." },
+    { a: "Sacramento City", cite: "§12.5(b) — everything except sick leave:",
+      q: "All paid time shall count as time worked for purposes of calculating overtime with the exception of sick leave." },
+    { a: "Cosumnes", cite: "§5.1.2(b) — a named list, and the omissions matter. Holiday, CTO and workers' comp are deliberately left out:",
+      q: "Full-paid absences covered by the following leaves... shall count as ‘time worked’ for FLSA purposes: Sick Leave (7.1); Bereavement Leave (7.2); Employee Organizational Leave (7.3); Jury Duty Leave (7.4); Emergency Leave (7.10); New Child Leave (7.11) and Vacation Leave (8)." },
+    { a: "Fairfield", cite: "Art. 2.E.1 makes overtime purely schedule-based — *“all time worked other than regularly scheduled hours”* — so leave never reduces the rate on an extra shift. Fairfield also beats us on all three of the other levers:",
+      q: "the regular hourly rate for cash payment of overtime will be an individual unit member's standard hourly rate plus any premium pays identified in this MOU for which a unit member receives, and as set forth in the Fair Labor Standards Act.",
+      qcite: "Art. 2.E.5",
+      after: "Art. 2.E.1 makes overtime schedule-based — *“all time worked other than regularly scheduled hours”* — so leave never reduces the rate on an extra shift. Art. 2.E.4 allows a **480-hour** CTO bank for 56-hour personnel, cashable on 30 days' request. Art. 9.A pays **6.4% of actual salary plus educational incentive** as holiday pay every two weeks, plus 24 floating holiday hours a year. Art. 8.A confirms a **2,912-hour payroll basis**." },
+    { a: "Folsom", cite: "Art. V §1.B — blanket, no carve-outs:",
+      q: "It is understood that leave time taken by an employee shall continue to not be counted as time worked for FLSA purposes." },
+    { a: "Roseville", cite: "Ch. 2 Art. II.E — the only MOU that names the leaves one by one:", rsv: true,
+      q: "Fair Labor Standards Act (FLSA) computations (for 24 day work cycle) will not include holiday, sick leave, compensatory time off (CTO), vacation and/or floating holidays as time worked.",
+      after: "Three more exclusions sit elsewhere: workers' comp, LWOP, suspension and short weeks (Art. II.F.4); jury duty (Ch. 3 Art. IV.A); and union bank hours, which also lose **retirement** credit (Ch. 7 Art. IV.D.4)." },
+  ],
+  rateIntro: "Separate from the threshold question: when overtime *is* owed, what rate is it calculated on? Roseville is near the bottom here too.",
+  rates: [
+    { a: "Rocklin",         r: "base rate **plus any special forms of compensation**" },
+    { a: "Folsom",          r: "straight time rate **including all compensation regularly and routinely received**" },
+    { a: "Cosumnes",        r: "base salary **plus educational incentives and paramedic/EMT stipends**" },
+    { a: "Fairfield",       r: "standard hourly rate **plus any premium pays in the MOU, “as set forth in the Fair Labor Standards Act”**" },
+    { a: "Sacramento City", r: "“regular rate of pay”" },
+    { a: "Vacaville",       r: "“regular rate of pay”" },
+    { a: "El Dorado Hills", r: "**base hourly rate only**" },
+    { a: "ROSEVILLE",       r: "**base hourly rate only**", rsv: true },
+  ],
+  closers: [
+    { tone: "bad", body: [
+      "**Folsom applies the same rule we do — and that is the whole comparison.** Folsom and Roseville are the only two agencies that exclude every category of leave from FLSA hours worked.",
+      "But Folsom pays its members for it. Their overtime rate sweeps in all regularly received compensation, where ours is base only. And they receive **6.0% holiday-in-lieu** every pay period, pensionable. Roseville gets neither.",
+      "Roseville also goes further than Folsom in two ways: our exclusions are spread across **four separate articles** covering nine categories, and ours is the **only MOU of the nine** that strips **retirement** credit as well as overtime credit.",
+    ]},
+    { tone: "plain", body: [
+      "**Say this part carefully.** Under the FLSA itself, no paid leave counts as hours worked — that is the federal floor. Roseville is not breaking any rule, and neither is Folsom. The argument is not legal, it is comparative:",
+      "**Seven of the eight comparable agencies protect their members above the federal floor. Only Folsom shares our position — and Folsom pays for it elsewhere.**",
+    ]},
+    { tone: "plain", body: [
+      "**Three levers, not one.** Whether leave counts toward 182 is only the first. The other two are what overtime is *paid at*, and how much comp time a member can bank. Roseville is at or near the bottom of all three:",
+      "**Rate:** base hourly only — where Rocklin, Folsom, Cosumnes and Fairfield all build incentives in. **CTO cap:** 144 hours — where Fairfield and Cosumnes both allow **480**, the federal maximum for public safety. **Holiday:** Fairfield pays 6.4% of actual salary *plus educational incentive*; Folsom 6.0%; El Dorado Hills 130 hours a year.",
+      "An agency can be silent on the threshold question and still treat its members better than we do. Fairfield is the proof.",
+    ]},
+  ],
+  sourcing: "Most entries are quoted from contract language; the Fairfield row reflects RFF leadership's knowledge of that agency's administration. Every provision read in the source MOU; sections and verbatim language recorded in “FLSA Hours Worked — Leave Treatment.md” in the Comparable LMA Docs folder. Sac Metro read from the District's published MOU online — page citations and its side letter to 6/30/2026 still outstanding. No side letters on file for any agency. Fairfield's MOU expired in 2025.",
+  caveat: "Document text only. None of this shows how payroll actually codes these hours at any agency, including ours.",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RFF TIME BANK & OVERTIME — E-Board brief
+// Reproduced from "RFF Time Bank & Overtime — Where We Stand" (prepared for the
+// E-Board meeting, November 2026). CONFIDENTIAL — RFF EXECUTIVE BOARD.
+// Content is faithful to that document; nothing has been added or re-verified here.
+// ─────────────────────────────────────────────────────────────────────────────
+export const TIMEBANK_BRIEF = {
+  title: "RFF Time Bank & Overtime — Where We Stand",
+  sub: "Prepared for the E-Board meeting · November 2026 · Sources: RFF MOU 2026–29, eight comparable agency MOUs, City HR correspondence",
+  confidential: "CONFIDENTIAL — RFF EXECUTIVE BOARD",
+  sections: [
+    { n: "1", h: "Bottom line", blocks: [
+      { t: "callout", tone: "bad", title: "The issue", body: [
+        "For at least seven years — and the City cannot say how much longer — a member who used RFF Time Bank hours and then worked an extra shift in the same pay period was paid **time and a half** on that extra shift. The City now says that was an error, and that those hours should never have counted toward overtime." ]},
+      { t: "p", x: "**Nothing is signed.** The City has offered a side letter. It would restore the overtime — and **invoice RFF for the cost of it**, with the City's own contribution capped at 100 hours a year." },
+      { t: "p", x: "The City has also announced it will apply the same correction to **workers' compensation leave, jury duty, leave without pay, suspension, and short weeks worked by new employees**. That part has no stated effective date and does not appear to depend on RFF signing anything." },
+    ]},
+    { n: "2", h: "The history", blocks: [
+      { t: "table", head: ["Period", "Payroll system", "How Time Bank hours were treated", "Basis"], rows: [
+        ["2012 → June 2019", "Prior system", "Counted as time worked — extra shift paid at 1.5×", "RFF POSITION"],
+        ["Before July 2019", "Prior system", "Same treatment; City cannot identify a start date", "CITY ADMITS"],
+        ["July 2019 → today", "Current system", "Same treatment, carried through the migration", "CITY ADMITS"],
+      ]},
+      { t: "p", x: "The City's Human Resources Director put the key fact in writing:" },
+      { t: "quote", q: "Further research by Jana did not confirm that these inadvertent overpayments started with the last admin change. It went further back into the prior payroll system, so prior to July 2019.", cite: "Stacey Peterson, HR Director, email to Brett" },
+      { t: "p", x: "**Why that sentence matters.** A past-practice claim turns on whether a practice was longstanding and consistent. The City has now conceded both: the treatment survived a full payroll system migration, ran across multiple administrations, and they cannot date its beginning. It also predates every current member of HR, the City Council, and the City Manager's office." },
+      { t: "callout", tone: "gold", title: "Be precise on the date", body: [
+        "The **2012** start date is RFF's position, supported by member recollection — it is **not yet documented**. What the City has admitted in writing is “prior to July 2019” and “further back into the prior payroll system.” Our records request reaches back to 2010 and is still outstanding.",
+        "Until those records are in hand, the E-Board and anyone speaking publicly should say **“at least seven years, across two payroll systems, with no start date the City can identify.”** That statement is fully supported by the City's own email. Asserting 2012 before we can prove it risks our credibility on the one element we are strongest on." ]},
+    ]},
+    { n: "3", h: "How we got here", blocks: [
+      { t: "ol", items: [
+        "**RFF raised a narrow question.** We argued Union Business Leave should count as time worked for FLSA overtime, because it was not listed among the leaves the MOU expressly says do not count.",
+        "**The City answered with something broader and worse.** Their position: UBL should not count for either FLSA or contract overtime.",
+        "**We conceded the FLSA point** in our September 9, 2026 letter. That concession was correct — under federal law no paid leave counts as “hours worked,” so silence in the MOU defaults against us. It was the weaker of our two arguments and it cost little to give up.",
+        "**The City then widened the review** to workers' comp, jury duty, LWOP, suspension and short weeks — and stated it will correct all of them.",
+      ]},
+      { t: "callout", tone: "bad", title: "The honest assessment", body: [
+        "We asked a question about one leave category and triggered a rollback across six. The exposure was always in the contract; raising the issue is what caused the City to look. That is worth understanding before we decide what to do next, because the same dynamic applies to every move from here." ]},
+    ]},
+    { n: "4", h: "What the City is offering — and what it costs", blocks: [
+      { t: "h3", x: "The offer" },
+      { t: "ul", items: [
+        "Side letter making Time Bank hours count toward **contract** overtime (FLSA stays excluded)",
+        "RFF **reimburses the City** the additional overtime cost out of the Time Bank; if the bank is short, RFF pays cash within 30 days of invoice",
+        "City contributes **up to 100 hours per year** to the Time Bank",
+        "City will not pursue recovery of past overpayments",
+        "New pay code and programming, possibly ready January 2027",
+      ]},
+      { t: "h3", x: "The price — two redline edits" },
+      { t: "p", x: "These are the real cost of the deal, and they are presented as housekeeping." },
+      { t: "table", head: ["Proposed edit", "What it actually does"], rows: [
+        ["Add **“and over scheduled shifts per pay period”** to the overtime trigger in Ch. 2, Art. II, Sec. B",
+         "Writes a per-pay-period hours threshold into the contract. **No such threshold exists today.** Overtime currently triggers per shift (“Over twenty-four hours per shift”), and contract OT is defined as “all extra shift assignments.” That per-shift structure is the reason the leave exclusions have nothing to bite on. This edit gives them teeth."],
+        ["Add the cross-reference **“(See Chapter 7, Article IV. D. ...)”** into the overtime exclusion list",
+         "Today the union-leave sentence sits in the Union Activities article, between two sentences about tax liability — which is the heart of our ambiguity argument. This edit relocates it into the overtime article, where it becomes unambiguous by design."],
+      ]},
+      { t: "p", x: "Together these do not merely settle union leave. They convert ambiguous language into clear language for **every leave on that list, permanently** — and clear language is exactly what defeats a past-practice claim. The side letter also asks RFF to stipulate that all of those leaves were “excluded...based on the historical and current MOU provisions.” **That stipulation is the forfeiture.**" },
+      { t: "callout", tone: "good", title: "One claim we checked and should not contest", body: [
+        "Adding “jury duty leave” to the consolidated list looks like new language. It is not. Chapter 3, Article IV.A already states: “Jury duty is not considered time worked for overtime purposes.” Consolidating it is accurate. Challenging it would put us wrong on the record." ]},
+      { t: "h3", x: "The economics do not work — using the City's own numbers" },
+      { t: "table", head: ["Year", "Hours available", "Hours used", "Year-end balance", "Utilization"], num: [1,2,3,4], rows: [
+        ["2025", "955.25", "962.75", "−7.50", "100.8%"],
+        ["2026 (partial)", "808", "641", "167", "79.3%"],
+      ]},
+      { t: "p", x: "In 2025 we **overspent the bank**. Roughly 116 members donated 8 hours each. Now layer a reimbursement obligation on a bank that is already fully consumed:" },
+      { t: "table", head: ["If this share of UBL hours coincides with an extra shift", "Premium RFF owes", "Shortfall after the City's 100 hrs"], num: [1,2], rows: [
+        ["25%", "120 hrs", "55 hrs"],
+        ["50%", "241 hrs", "175 hrs"],
+        ["100%", "481 hrs", "416 hrs"],
+      ]},
+      { t: "p", x: "**Every scenario is a shortfall**, payable in cash within 30 days of invoice. The City's 100-hour contribution equals **10.4%** of our 2025 usage. The City's exposure is capped; **ours is not.**" },
+      { t: "p", x: "Net effect: our members are made whole, **RFF pays for it**, and the practical result is either writing checks to the City or cutting union activity — which is the participation problem Trevor raised in the first place." },
+    ]},
+    { n: "5", h: "How every other department handles this", blocks: [
+      { t: "p", x: "All eight comparable MOUs read in full. **Not one charges the union for the overtime differential on union leave.**" },
+      { t: "table", head: ["Agency", "Employer-funded hours/yr", "Union billed for OT cost?", "Leave counts as time worked?"], rows: [
+        ["Sacramento City", "4,000", "No", "Yes — all paid time except sick leave"],
+        ["Sac Metro", "2,000 (+1,500)", "No", "Yes — all paid leave, contract OT"],
+        ["El Dorado Hills", "500", "No", "Silent"],
+        ["Rocklin", "120", "No", "Yes — all paid status counts to the 182-hr ceiling"],
+        ["Cosumnes", "Uncapped", "No", "Yes — union leave named expressly for FLSA"],
+        ["Folsom", "Uncapped", "No", "No for FLSA; contract OT unaffected"],
+        ["Vacaville", "0", "No", "Yes — all paid time off, contract OT"],
+        ["Fairfield", "0", "No", "Silent"],
+        ["**ROSEVILLE (City position)**", "**0 → offer of 100**", "**Yes — proposed**", "**No**"],
+      ], rsvRow: 8 },
+      { t: "callout", tone: "good", title: "Sac Metro is the model — and the on-point precedent", body: [
+        "**Two separate accounts.** Art. 4.F: the District provides **2,000 hours per calendar year** for Union Leave, plus **1,500 additional hours** annually if a Metro member holds the Local 522 President seat. Art. 4.G: unused hours **roll over**, with accrual capped at **5,000 hours**. Art. 4.H lets the Union buy more hours if it wants them, and lets members donate vacation — but those donations sit in a separate account on top of the District's 2,000 hours.",
+        "In Roseville, member donations **are** the entire program. There is no District-funded account at all.",
+        "**And Art. 13.B is the language we should be asking for:** “all paid leave will be considered ‘hours worked’ for purposes of determining overtime owed under this Agreement.” That is a blanket inclusion, and it governs contract overtime — which is precisely the fight we are in. Twenty miles away, bargaining with the same IAFF local number, the opposite rule applies." ]},
+      { t: "callout", tone: "gold", title: "Two Sac Metro details to state carefully", body: [
+        "The **Day assignment** (40-hour administrative schedule) in Art. 4 is offered to the Metro Union **Vice President**, not the President, and it is an option — if the Union waives it, the District provides the 2,000 hours instead. Metro's own MOU labels two consecutive subsections “F,” so the relationship between the Day assignment and the hour totals is ambiguous in their document.",
+        "**Backfill by promotion and overtime eligibility for a released officer appear nowhere in the MOU.** Art. 31 fills on-duty Captain and Engineer vacancies from promotional lists in rank order, but that is general shift staffing, not a union-leave term. If Metro does those things, it is by practice — so we should not assert them as contract terms." ]},
+      { t: "p", x: "**Roseville is last in the region.** We are one of only three agencies whose employer funds zero union leave hours — and the other two, Vacaville and Fairfield, at least do not bill their unions for the overtime. Our members cap out at 8 donated hours each per year, and ours is the **only MOU of the nine** that strips those hours of overtime and retirement credit by name." },
+      { t: "p", x: "**Two models for the fix.** Sac Metro Art. 13.B is the closest to our dispute: all paid leave counts as hours worked for contract overtime, full stop. Cosumnes names union leave in an express inclusion list — “Employee Organizational Leave” counts as time worked — which is the model for the FLSA side. Both districts fund the leave themselves." },
+    ]},
+    { n: "6", h: "Recommendations", blocks: [
+      { t: "ol", items: [
+        "**Do not sign the two redline edits.** They are the entire cost of this deal and they are permanent. Everything else is negotiable; these are not.",
+        "**Do not stipulate that the practice was error.** Agreeing those leaves were “always excluded” forfeits the past-practice claim across all six categories, not just union leave.",
+        "**Demand the co-occurrence data before pricing anything.** How many work periods in each of the last seven years did a member use Time Bank hours and work an extra shift, and what was the dollar differential? We cannot agree to an uncapped obligation we have never measured. The City must have run this to propose a reimbursement scheme.",
+        "**Pin down the implementation date in writing** for the correction to workers' comp, jury duty, LWOP, suspension and short weeks. It has no stated effective date and does not appear contingent on the side letter. If the City implements unilaterally, that triggers our demand to bargain — and a filing clock.",
+        "**Counter-propose: if contract OT counts, the City funds it.** That is what all eight comparables effectively do. If the City insists on reimbursement, the obligation must be capped at the same 100 hours they are capping themselves at.",
+        "**Keep the two tracks separate.** FLSA inclusion is a bargaining proposal for the next cycle, using Sac Metro or Cosumnes language verbatim. Contract overtime is the fight now — that is where the structure favors us.",
+        "**Audit our own records first.** When the 2010-forward records arrive, hunt for the instances that hurt us before the City finds them. A past-practice case is judged by its weakest instances. Scattered exceptions read as noise; a cluster in one year reads as a change point.",
+        "**Get counsel on past practice and filing deadlines** before we respond. The textual analysis here is solid enough to brief an attorney with; it is not a substitute for one.",
+      ]},
+    ]},
+    { n: "7", h: "What we still do not know", blocks: [
+      { t: "ul", items: [
+        "**Records request back to 2010 — outstanding.** This is what converts “at least seven years” into a documented start date.",
+        "**Co-occurrence counts and dollar value — never provided.** Without it the reimbursement obligation cannot be priced.",
+        "**Whether the City has already started correcting the other leaves**, or when it intends to.",
+        "**Sac Metro figures need page citations.** The provisions above are from the District's own published MOU and the substance is solid, but they were read online rather than from a downloaded copy, so we do not yet have section-and-page citations in the form the City will demand.",
+        "**Sac Metro's side letter extending to June 30, 2026 — body not yet read.** If Metro changed Art. 4 or Art. 13 when they extended, that is where it happened.",
+        "**No side letters on file for any comparable agency.** Overtime computation is a common side-letter subject, so some of the comparison above may be incomplete.",
+        "**How these hours were coded historically** — a dedicated pay code is far harder for the City to call an accident than a generic overtime code.",
+      ]},
+    ]},
+  ],
+  sourcing: "Every MOU provision cited here was read in the source document and is recorded with section and page in the extraction files held in the Comparable LMA Docs folder. Bank utilization figures are the City's own, as reported by HR. Items marked RFF POSITION are not yet documented.",
+  caveat: "Not legal advice. Past-practice doctrine and administrative filing deadlines are legal questions for RFF's counsel.",
+};
