@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF, RETIREE_MEDICAL, retirementValue, pensionTierFor, RETIRE_SOURCES, PEPRA_CAP } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF, RETIREE_MEDICAL, retirementValue, pensionTierFor, RETIRE_SOURCES, PEPRA_CAP, UBL_TREATMENT } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -1235,6 +1235,46 @@ export default function ComparisonTool() {
 
                   <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "30px 0 12px" }}>Where this leaves us</div>
                   {FLSA_LEAVE.closers.map((c, i) => <DocCallout key={i} tone={c.tone} body={c.body} />)}
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "34px 0 12px" }}>Union business leave &mdash; who funds it, and who pays</div>
+                  <div style={{ fontSize: "13.5px", lineHeight: 1.68, color: C.text, margin: "11px 0" }}>{inl(UBL_TREATMENT.intro, "ui")}</div>
+                  <div style={{ overflowX: "auto", margin: "12px 0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead><tr>{UBL_TREATMENT.cols.map((c, i) => (
+                        <th key={i} style={{ ...docTh, textAlign: i >= 3 ? "center" : "left", minWidth: i === 0 ? "130px" : undefined }}>{c}</th>
+                      ))}</tr></thead>
+                      <tbody>{UBL_TREATMENT.rows.map((r, i) => (
+                        <tr key={i} style={r.rsv ? { background: "rgba(151,114,47,0.12)" } : undefined}>
+                          <td style={{ ...docTd, fontWeight: 700, color: r.rsv ? C.gold : C.text }}>{r.a}</td>
+                          <td style={{ ...docTd, fontSize: "12px" }}>{r.fund}</td>
+                          <td style={{ ...docTd, fontSize: "12px", fontWeight: 600 }}>{r.hrs}</td>
+                          <td style={{ ...docTd, textAlign: "center" }}><LeaveDot v={r.fl} /></td>
+                          <td style={{ ...docTd, textAlign: "center", fontSize: "12px", fontWeight: 700,
+                                       color: r.payWarn ? C.danger : C.textMuted }}>{r.pay}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+
+                  {UBL_TREATMENT.rows.map((r, i) => (
+                    <div key={i} style={{ margin: "12px 0", paddingLeft: r.rsv ? "11px" : 0, borderLeft: r.rsv ? `3px solid ${C.gold}` : "none" }}>
+                      <div style={{ fontSize: "13px", lineHeight: 1.62, color: C.text }}>
+                        <strong style={{ color: r.rsv ? C.gold : C.text }}>{r.a}</strong>{"  "}{inl(r.flTxt, "uf" + i)}
+                      </div>
+                      {r.payTxt && <div style={{ fontSize: "12.5px", lineHeight: 1.6, color: C.textMuted, marginTop: "4px" }}>{inl(r.payTxt, "up" + i)}</div>}
+                    </div>
+                  ))}
+
+                  <DocCallout tone="gold" title={UBL_TREATMENT.roseville.title} body={UBL_TREATMENT.roseville.body} />
+
+                  {UBL_TREATMENT.findings.map((f, i) => <DocCallout key={i} tone={f.tone} body={f.body} />)}
+
+                  <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, margin: "20px 0 6px" }}>Open on union leave</div>
+                  <ul style={{ margin: "8px 0", paddingLeft: "22px" }}>
+                    {UBL_TREATMENT.unknowns.map((u, i) => (
+                      <li key={i} style={{ fontSize: "12.5px", lineHeight: 1.6, color: C.text, margin: "5px 0" }}>{inl(u, "uu" + i)}</li>
+                    ))}
+                  </ul>
 
                   <DocFoot doc={FLSA_LEAVE} />
                 </div>

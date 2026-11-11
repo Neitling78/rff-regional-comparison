@@ -1631,3 +1631,75 @@ export const RETIRE_SOURCES = [
   "PEMHCA minimum: City of Roseville published retiree PEMHCA page — $162.00/mo for 2026, $167.00/mo for 2027.",
   "Retirement formulas and retiree medical terms: each agency's MOU in the Comparable LMA Docs folder, except Sacramento Metro Fire, read from the District's published MOU because both local copies are saved web pages.",
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNION BUSINESS LEAVE — how each agency funds it and whether it counts for FLSA
+// Read from the source MOUs 2026-11-11. Sac Metro from the District's published
+// MOU (both local copies are saved web pages). Appended to the FLSA Leave tab.
+// ─────────────────────────────────────────────────────────────────────────────
+export const UBL_TREATMENT = {
+  intro: "The matrix above answers whether union leave counts toward the 182-hour FLSA threshold. It does not show who pays for the leave, how many hours exist, or whether the union is billed when a member uses them. Those are the terms actually in dispute in Roseville, so they are set out here.",
+  cols: ["Agency", "Who funds the hours", "Hours per year", "Counts as time worked?", "Does the union pay?"],
+  rows: [
+    { a: "Cosumnes CSD", fund: "District", hrs: "Uncapped", fl: "y",
+      flTxt: "**Yes, named expressly.** §5.1.2(b) lists “Employee Organizational Leave (7.3)” in the leaves that count as time worked for FLSA.", pay: "No" },
+    { a: "Sac Metro", fund: "District", hrs: "2,000 (+1,500)", fl: "y",
+      flTxt: "**Yes.** Art. 13.B: all paid leave counts as hours worked for contract overtime. No union-leave carve-out.", pay: "No" },
+    { a: "Sacramento City", fund: "City", hrs: "4,000 pool", fl: "y",
+      flTxt: "**Yes.** §12.5(b) counts all paid time except sick leave. Union leave is not carved out.",
+      pay: "Only above 4,000", payWarn: true,
+      payTxt: "§4.1(b)(5): if the Union exceeds the 4,000-hour pool it reimburses the City for the excess at **1.43 times** the employee's regular hourly rate." },
+    { a: "El Dorado Hills", fund: "Department", hrs: "500", fl: "y",
+      flTxt: "**Effectively yes.** No hours-worked clause, but Art. VII.F.4 pays the premium for the ten scheduled overtime hours every pay period regardless of leave taken, so union leave cannot erode a member's position.", pay: "No" },
+    { a: "Rocklin", fund: "City", hrs: "120", fl: "y",
+      flTxt: "**Yes.** Sec. II Art. 5.A.1: “all time with the exception of overtime” counts toward the 182-hour ceiling. Art. 1.B and 1.C add City-paid grievance and negotiation leave on top of the 120 hours.", pay: "No" },
+    { a: "Folsom", fund: "City, plus a member-donated bank", hrs: "“Reasonable”, uncapped", fl: "n",
+      flTxt: "**No for FLSA.** Art. V §1.B excludes all leave from FLSA hours worked. But union leave is **not** singled out, and contract overtime is unaffected.",
+      pay: "No",
+      payTxt: "Art. III §1: release time “without loss of compensation or benefits,” plus 30 minutes before and 15 after each meeting and travel time. §2's member-donated Union Bank is **in addition to** that City-paid time." },
+    { a: "Vacaville", fund: "Members only", hrs: "Unlimited donation", fl: "y",
+      flTxt: "**Yes for contract overtime.** §5.3: “Paid time off shall be counted as hours worked for contractual overtime calculation purposes.” FLSA treatment is silent.",
+      pay: "Yes — backfill", payWarn: true,
+      payTxt: "§15.2: donated hours convert to dollars, and “**a dollar amount shall be charged to the Union Bank at the hourly overtime cost of that employee's replacement.**” A member is always hired back to fill a union leave position regardless of staffing. Members may donate without limit." },
+    { a: "Fairfield", fund: "Members only", hrs: "350 bank", fl: "y",
+      flTxt: "**Not reduced.** Art. 2.E.1 makes overtime purely schedule-based — “all time worked other than regularly scheduled hours” — so leave of any kind never reduces the rate on an extra shift.",
+      pay: "No",
+      payTxt: "Art. 9 §E: a 350-hour annual bank funded by FPFA members at 0.25 hours per pay period (6.5 hrs/yr each). Two negotiating committee members get City-paid leave on top, and officers get unlimited shift trades." },
+    { a: "ROSEVILLE", rsv: true, fund: "Members only", hrs: "8 hrs per member", fl: "n",
+      flTxt: "**No — and uniquely, no retirement credit either.** Ch. 7 Art. IV.D.4: “Hours donated to association members shall not be considered time worked for **overtime, retirement, or any other benefit purpose**.”",
+      pay: "Proposed — yes", payWarn: true,
+      payTxt: "The City's offered side letter would make Time Bank hours count toward contract overtime, then invoice RFF for the additional overtime cost, with the City contributing up to 100 hours a year. Nothing is signed." },
+  ],
+
+  roseville: {
+    title: "The Roseville sentence, in its actual setting",
+    body: [
+      "Ch. 7 Art. IV.D.4 reads in full: *“RFF members assume any tax liability for being assessed vacation or CTO hours and/or using Time Bank hours. Hours donated to association members shall not be considered time worked for overtime, retirement, or any other benefit purpose. However, any donated hours will be subject to applicable state and federal payroll taxes.”*",
+      "The exclusion sits in the **Union Activities** article, sandwiched between two sentences about **tax liability** — not in the overtime article with the other FLSA exclusions. That placement is the whole of the ambiguity argument, and it is why the City's proposed cross-reference edit matters so much: moving it into the overtime article makes it unambiguous by design.",
+      "Roseville's bank is also the smallest in the region by a wide margin: **8 donated hours per member per year**, carried over, with no City-funded account at all. Fairfield's members fund 6.5 hours each but into a 350-hour pooled bank; Vacaville's members may donate without limit.",
+    ],
+  },
+
+  findings: [
+    { tone: "bad", body: [
+      "**Only two of the nine exclude union leave from FLSA hours worked — Roseville and Folsom.** Folsom excludes *all* leave by one blanket sentence and does not name union leave; contract overtime is unaffected and the City still funds the release time.",
+      "**Roseville is the only MOU of the nine that strips retirement credit from these hours as well as overtime credit.** No other agency's union-leave provision mentions retirement at all.",
+    ]},
+    { tone: "gold", body: [
+      "**Correction to an earlier claim, before someone else finds it.** The E-Board brief states that not one comparable agency charges the union for the overtime cost of union leave. Read strictly — about the premium on a member's *own* extra shift — that still holds. But two agencies do bill their unions in related circumstances, and both will be cited back at us:",
+      "**Vacaville §15.2** charges the Union Bank the full **overtime cost of the replacement** every time a member takes union leave, and guarantees a hire-back regardless of staffing. **Sacramento City §4.1(b)(5)** charges the Union **1.43× regular rate** for any hours beyond the 4,000-hour pool.",
+      "The defensible version of the claim is narrower: **no comparable agency bills its union for the overtime differential a member earns on a separate extra shift**, which is what the City's side letter proposes. Vacaville and Sacramento City charge for backfill or for hours beyond a City-funded pool — and in Sacramento City's case only after 4,000 free hours.",
+    ]},
+    { tone: "plain", body: [
+      "**Seven of nine have an employer-funded account. Roseville has none.** Cosumnes uncapped, Sac City 4,000, Sac Metro 2,000 plus 1,500, EDH 500, Rocklin 120, Folsom “reasonable” release time, Fairfield City-paid negotiating leave on top of the member bank. Roseville's program is member donations and nothing else.",
+      "**Two models for a fix.** Cosumnes §5.1.2(b) names union leave in an express FLSA inclusion list. Sac Metro Art. 13.B is a blanket inclusion for contract overtime. Both districts fund the leave themselves.",
+    ]},
+  ],
+
+  unknowns: [
+    "**Sac Metro's union-leave hours** (Art. 4.F–4.H) were read from the District's published MOU online, not from a local copy. Section-and-page citations are still outstanding, and the side letter extending to 6/30/2026 has not been read.",
+    "**No side letters are on file for any comparable agency.** Overtime computation and release time are common side-letter subjects, so any of these could be modified by a document not in the collection.",
+    "**Fairfield's MOU expired 6/30/2025** and the city is still out of contract.",
+    "**How each agency actually codes these hours in payroll** is not shown by any contract. A dedicated pay code is far harder to call an accident than a generic overtime code — that question is still open in Roseville too.",
+  ],
+};
