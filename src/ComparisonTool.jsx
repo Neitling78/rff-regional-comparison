@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF, RETIREE_MEDICAL } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF, RETIREE_MEDICAL, retirementValue, pensionTierFor, RETIRE_SOURCES, PEPRA_CAP } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -530,6 +530,12 @@ export default function ComparisonTool() {
   // Pensionable-income view. Session-only like the others: the contractual comparison is
   // total compensation, so this resets to OFF on every load.
   const [pensMode, setPensMode] = useState(false);
+  // Retirement value view: pension + retiree medical as one monthly figure. Session-only
+  // like the toggles above - it resets off on every load so the tabs always open on the
+  // contractual comparison rather than a retirement scenario someone left set.
+  const [retMode, setRetMode] = useState(false);
+  const [hireYear, setHireYear] = useState(2026);
+  const [retAge, setRetAge] = useState(57);
   // Clear the retired persisted-unlock key once, so a browser that was left unlocked
   // under the old behaviour does not keep a stale "rff_admin=1" sitting in storage.
   useEffect(() => { try { localStorage.removeItem("rff_admin"); } catch (e) {} }, []);
@@ -573,7 +579,7 @@ export default function ComparisonTool() {
     // Re-run when a rank toggle changes too. Toggling inserts new .fade blocks, and an
     // element the observer never saw keeps opacity:0 while still occupying its full
     // height - which reads as a large blank gap under the buttons.
-  }, [activeMethodology, classicPers, rankYears, pensMode]);
+  }, [activeMethodology, classicPers, rankYears, pensMode, retMode]);
 
   // Roseville longevity is editable on both tabs; a set value overrides the City-method default too.
   const rsvLongevityOverride = (trueEdits["City of Roseville"]?.longevity !== undefined && trueEdits["City of Roseville"]?.longevity !== "")
@@ -1687,14 +1693,25 @@ export default function ComparisonTool() {
               const lKey = "longevity__" + yearsOn;
               const lSaved = saved[lKey];
               const rsvTrack = ROSEVILLE_SERVICE_PAY[hiredPost2017 ? "post2017" : "pre2017"];
+              // Tiers are defined at 10/15/20/25. A year selection ABOVE the top defined
+              // tier (30) must fall back to the highest tier at or below it - otherwise the
+              // lookup misses and the row silently reverts to its 10-year longevity, which
+              // is lower than the 25-year figure and understates every agency.
+              const tierAtOrBelow = (tbl) => {
+                if (!tbl) return undefined;
+                const ks = Object.keys(tbl).map(Number).filter(k => k <= yearsOn).sort((a, b) => b - a);
+                return ks.length ? tbl[ks[0]] : undefined;
+              };
               if (lSaved !== undefined && lSaved !== "") {
                 cell.longevity = lSaved;
-              } else if (ag === "City of Roseville" && rsvTrack[yearsOn] !== undefined) {
+              } else if (ag === "City of Roseville" && tierAtOrBelow(rsvTrack) !== undefined) {
                 // Art. VIII vs Art. IX - the two tracks agree at 10 and 15 years and
                 // diverge from the 20th (7.5% vs a 5.0% cap).
-                cell.longevity = rsvTrack[yearsOn];
+                cell.longevity = tierAtOrBelow(rsvTrack);
               } else if (yearsOn !== 10) {
-                const yl = (RANK_LONGEVITY[yearsOn] || {})[ag];
+                const byYear = {};
+                Object.keys(RANK_LONGEVITY).forEach(y => { if (RANK_LONGEVITY[y][ag] !== undefined) byYear[y] = RANK_LONGEVITY[y][ag]; });
+                const yl = tierAtOrBelow(byYear);
                 if (yl !== undefined) cell.longevity = yl;
               }
               eff[rank][ag] = cell;
@@ -1825,9 +1842,16 @@ export default function ComparisonTool() {
                                border:`1.5px solid ${pensOn ? C.percentile : C.border}`, fontWeight:800, padding:"7px 14px", cursor:"pointer" }}>
                       {pensOn ? "\u25C9 Pensionable income \u2014 ON" : "\u25CB Show pensionable income"}
                     </button>
+                    <button onClick={() => setRetMode(v => !v)} className="chip"
+                      title={retMode ? "Hide the retirement value panel."
+                                     : "Show what this rank collects in retirement at each agency: CalPERS pension plus the employer's retiree medical contribution, as one monthly figure."}
+                      style={{ background: retMode ? C.gold : C.card, color: retMode ? "#fff" : C.textMuted,
+                               border:`1.5px solid ${retMode ? C.gold : C.border}`, fontWeight:800, padding:"7px 14px", cursor:"pointer" }}>
+                      {retMode ? "\u25C9 Retirement value \u2014 ON" : "\u25CB Pension + retiree medical"}
+                    </button>
                     <span style={{ width:"1px", height:"22px", background:C.border }} />
                     <span style={{ fontSize:"11px", color:C.textDim, fontWeight:700 }}>Longevity at</span>
-                    {[10,15,20,25].map(y => (
+                    {[10,15,20,25,30].map(y => (
                       <button key={y} onClick={() => setRankYears(y)} className="chip"
                         title={y===10 ? "Year 10 - the tier MOU Ch.2 Art.I A(3) actually specifies. This is the contractual basis."
                                       : "Show every agency's longevity at "+y+" years of service. Longevity only - vacation and sick accrual are NOT adjusted."}
@@ -1843,6 +1867,126 @@ export default function ComparisonTool() {
                     </span>
                   </div>
                 )}
+
+                {retMode && classicAvail && (() => {
+                  const rv = {};
+                  comps.concat(rsv ? [rsv] : []).forEach(r => {
+                    rv[r.name] = retirementValue(r.name, r.tc_pensionable, { hireYear, years: yearsOn, age: retAge });
+                  });
+                  const known = Object.keys(rv).filter(n => rv[n].total != null);
+                  const best = known.length ? known.reduce((a, b) => rv[a].total >= rv[b].total ? a : b) : null;
+                  const rsvV = rsv ? rv[rsv.name] : null;
+                  const ordered = [...(rsv ? [rsv] : []), ...comps].filter(Boolean);
+                  const allNotes = [];
+                  ordered.forEach(r => (rv[r.name].notes || []).forEach(n => { if (allNotes.indexOf(n) === -1) allNotes.push(n); }));
+                  return (
+                  <div style={{ marginBottom:"20px", padding:"16px 18px", background:C.card, border:`1.5px solid ${C.gold}`, borderRadius:"10px" }}>
+                    <div style={{ fontSize:"13px", fontWeight:800, color:C.gold, letterSpacing:"0.04em", marginBottom:"4px" }}>
+                      RETIREMENT VALUE &mdash; {rankLabel}
+                    </div>
+                    <div style={{ fontSize:"12px", color:C.textMuted, lineHeight:1.6, marginBottom:"12px" }}>
+                      CalPERS pension plus the employer's retiree medical contribution, as one monthly figure. Pension = benefit factor &times; years of service &times; pensionable pay, capped at the PEPRA limit where it binds. Retiree medical is the employer contribution only, priced at the family tier on 2027 CalPERS Region 1 rates.
+                    </div>
+
+                    <div style={{ display:"flex", gap:"16px", flexWrap:"wrap", alignItems:"center", marginBottom:"14px", paddingBottom:"12px", borderBottom:`1px solid ${C.border}` }}>
+                      <label style={{ fontSize:"11px", fontWeight:700, color:C.textDim }}>Year hired&nbsp;
+                        <input type="number" min="1980" max="2030" value={hireYear}
+                          onChange={e => setHireYear(Math.max(1980, Math.min(2030, parseInt(e.target.value||"2026",10))))}
+                          style={{ width:"68px", marginLeft:"4px", background:C.bg, border:`1.5px solid ${C.border}`, borderRadius:"4px", color:C.text, fontSize:"12px", fontWeight:700, padding:"4px 6px", textAlign:"right", fontFamily:"inherit" }} />
+                      </label>
+                      <label style={{ fontSize:"11px", fontWeight:700, color:C.textDim }}>Retire at age&nbsp;
+                        <select value={retAge} onChange={e => setRetAge(parseInt(e.target.value,10))}
+                          style={{ marginLeft:"4px", background:C.bg, border:`1.5px solid ${C.border}`, borderRadius:"4px", color:C.text, fontSize:"12px", fontWeight:700, padding:"4px 6px", fontFamily:"inherit" }}>
+                          {[50,51,52,53,54,55,56,57,58,59,60].map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                      </label>
+                      <span style={{ fontSize:"11px", color:C.textDim }}>
+                        Years of service follows the <strong style={{color:C.percentile}}>{yearsOn} yr</strong> button above.
+                      </span>
+                    </div>
+
+                    <div style={{ overflowX:"auto" }}>
+                      <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"720px" }}>
+                        <thead><tr>
+                          <th style={{ ...docTh, minWidth:"130px" }}>Agency</th>
+                          <th style={{ ...docTh, textAlign:"left" }}>Formula</th>
+                          <th style={{ ...docTh, textAlign:"right" }}>Factor</th>
+                          <th style={{ ...docTh, textAlign:"right" }}>Pensionable /mo</th>
+                          <th style={{ ...docTh, textAlign:"right" }}>Pension /mo</th>
+                          <th style={{ ...docTh, textAlign:"right" }}>Retiree medical /mo</th>
+                          <th style={{ ...docTh, textAlign:"right" }}>Total /mo</th>
+                        </tr></thead>
+                        <tbody>{ordered.map((r, i) => {
+                          const v = rv[r.name];
+                          const isR = !!r.highlight;
+                          const gap = (rsvV && rsvV.total != null && v.total != null && !isR) ? v.total - rsvV.total : null;
+                          return (
+                            <tr key={i} style={isR ? { background:"rgba(151,118,47,0.13)" } : (r.name === best ? { background:"rgba(79,122,60,0.09)" } : undefined)}>
+                              <td style={{ ...docTd, fontWeight:700, color: isR ? C.gold : C.text }}>
+                                {r.shortName || r.name}
+                                {r.name === best && <span style={{ fontSize:"9px", fontWeight:800, color:C.green, marginLeft:"6px" }}>BEST</span>}
+                              </td>
+                              <td style={{ ...docTd, fontSize:"11.5px", color:C.textMuted }}>{v.formula}<div style={{ fontSize:"10px", color:C.textDim }}>{v.formulaLabel}</div></td>
+                              <td style={{ ...docTd, textAlign:"right" }}>{(v.factor*100).toFixed(2)}%</td>
+                              <td style={{ ...docTd, textAlign:"right", color: v.capped ? C.danger : C.text }}>
+                                {fmtDollar(v.cappedPensionable)}
+                                {v.capped && <div style={{ fontSize:"9px", color:C.danger }}>PEPRA cap</div>}
+                              </td>
+                              <td style={{ ...docTd, textAlign:"right", fontWeight:600 }}>{fmtDollar(v.pension)}</td>
+                              <td style={{ ...docTd, textAlign:"right", fontWeight:600, color: v.medicalOk ? (v.medical > 0 ? C.text : C.danger) : C.textDim }}>
+                                {v.medicalOk ? fmtDollar(v.medical) : "not priceable"}
+                                {v.medicalOk && v.vestPct != null && v.vestPct < 1 && <div style={{ fontSize:"9px", color:C.textDim }}>{Math.round(v.vestPct*100)}% vested</div>}
+                              </td>
+                              <td style={{ ...docTd, textAlign:"right", fontWeight:800, fontSize:"13.5px", color: isR ? C.gold : C.text }}>
+                                {v.total != null ? fmtDollar(v.total) : "\u2014"}
+                                {gap != null && Math.abs(gap) >= 1 && (
+                                  <div style={{ fontSize:"10px", fontWeight:700, color: gap > 0 ? C.green : C.danger }}>
+                                    {gap > 0 ? "+" : "\u2212"}{fmtDollar(Math.abs(gap)).replace("$","$")} vs us
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}</tbody>
+                      </table>
+                    </div>
+
+                    {rsvV && best && rv[best].total != null && rsvV.total != null && best !== (rsv && rsv.name) && (
+                      <div style={{ marginTop:"12px", padding:"10px 14px", background:"rgba(168,30,30,0.07)", borderLeft:`3px solid ${C.danger}`, borderRadius:"0 4px 4px 0", fontSize:"12.5px", lineHeight:1.6, color:C.text }}>
+                        A {rankLabel.toLowerCase()} hired in {hireYear}, retiring at {retAge} with {yearsOn} years, collects{" "}
+                        <strong>{fmtDollar(rv[best].total - rsvV.total)}/mo more</strong> at {best} than at Roseville &mdash;{" "}
+                        <strong>{fmtDollar((rv[best].total - rsvV.total) * 12)}/yr</strong>.
+                        {Math.abs(rv[best].pension - rsvV.pension) < 1
+                          ? " The pensions are identical; the entire gap is retiree medical."
+                          : " " + fmtDollar(Math.abs(rv[best].pension - rsvV.pension)) + "/mo of that is pension and the rest is retiree medical."}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop:"12px", fontSize:"11px", lineHeight:1.6, color:C.textDim }}>
+                      <div style={{ fontWeight:700, color:C.textMuted, marginBottom:"3px" }}>Retiree medical basis, per agency</div>
+                      {ordered.map((r, i) => (
+                        <div key={i} style={{ margin:"3px 0" }}>
+                          <strong style={{ color: r.highlight ? C.gold : C.textMuted }}>{r.shortName || r.name}</strong>
+                          {" \u2014 "}{rv[r.name].medTierLabel}. {rv[r.name].medicalBasis}
+                        </div>
+                      ))}
+                    </div>
+
+                    {allNotes.length > 0 && (
+                      <div style={{ marginTop:"12px", padding:"10px 14px", background:"rgba(151,114,47,0.08)", borderLeft:`3px solid ${C.gold}`, borderRadius:"0 4px 4px 0" }}>
+                        <div style={{ fontSize:"10.5px", fontWeight:800, letterSpacing:"0.06em", textTransform:"uppercase", color:C.gold, marginBottom:"5px" }}>Caveats in play at these settings</div>
+                        {allNotes.map((n, i) => <div key={i} style={{ fontSize:"11.5px", lineHeight:1.55, color:C.text, margin:"3px 0" }}>&middot; {n}</div>)}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop:"12px", paddingTop:"10px", borderTop:`1px solid ${C.border}`, fontSize:"10.5px", lineHeight:1.55, color:C.textDim }}>
+                      <strong style={{ color:C.textMuted }}>Sources.</strong>{" "}
+                      {RETIRE_SOURCES.join(" ")}{" "}
+                      <strong style={{ color:C.textMuted }}>Not a benefit estimate.</strong> This is a contract comparison. An individual's actual pension depends on their own dates, service credit and final compensation, and CalPERS is the only authority on it.
+                    </div>
+                  </div>
+                  );
+                })()}
 
                 {yearsOn!==10 && (
                   <div style={{ fontSize:"12px", lineHeight:1.75, color:C.text, marginBottom:"16px", padding:"12px 15px", background:"rgba(108,122,84,0.09)", border:`1.5px solid ${C.percentile}`, borderRadius:"10px" }}>

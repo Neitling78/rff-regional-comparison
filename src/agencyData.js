@@ -1417,3 +1417,217 @@ export const RETIREE_MEDICAL = {
   sourcing: "Every provision was read in the source MOU in the Comparable LMA Docs folder on 11/11/2026, except Sacramento Metro Fire, which was read from the District's published MOU at metrofire.ca.gov because both local copies are saved web pages rather than PDFs. PEMHCA minimum figures are from the City of Roseville's published retiree PEMHCA page ($162.00/mo for 2026, $167.00/mo for 2027).",
   caveat: "Contract text only. None of this reflects how any agency actually administers these benefits, what the premiums cost in dollars, or what a given individual would receive. Eligibility turns on hire date, age, service credit and the 120-day retirement window — an individual member's answer requires their own dates.",
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RETIREMENT VALUE ENGINE — pension + retiree medical, one monthly figure
+// Researched 2026-11-11. Every constant below is sourced; see RETIRE_SOURCES.
+// NOTHING here is estimated. Where a figure cannot be derived from a contract or
+// a published rate table, the tier returns ok:false and is reported as unknown
+// rather than guessed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// CalPERS local safety benefit factors, % of final comp per year of service.
+// Source: CalPERS "Retirement Formulas and Benefit Factors" charts, read 11/11/2026.
+export const PENSION_FACTORS = {
+  "3@50":   { 50:3.000, 51:3.000, 52:3.000, 53:3.000, 54:3.000, 55:3.000, 56:3.000, 57:3.000, 58:3.000, 59:3.000, 60:3.000 },
+  "3@55":   { 50:2.400, 51:2.520, 52:2.640, 53:2.760, 54:2.880, 55:3.000, 56:3.000, 57:3.000, 58:3.000, 59:3.000, 60:3.000 },
+  "2@50":   { 50:2.000, 51:2.140, 52:2.280, 53:2.420, 54:2.560, 55:2.700, 56:2.700, 57:2.700, 58:2.700, 59:2.700, 60:2.700 },
+  "2.7@57": { 50:2.000, 51:2.100, 52:2.200, 53:2.300, 54:2.400, 55:2.500, 56:2.600, 57:2.700, 58:2.700, 59:2.700, 60:2.700 },
+};
+export const PENSION_MIN_AGE = 50;
+
+// PEPRA pensionable compensation cap. Source: CalPERS Circular Letter 200-001-26,
+// "2026 Compensation Limits for Classic and PEPRA Members", effective 1/1/2026.
+// 2027 limits were not published as of 11/11/2026, so 2026 figures are used.
+export const PEPRA_CAP = { noSS: 191679, withSS: 159733, classic401a17: 360000, year: 2026 };
+
+// CalPERS Region 1 Basic (non-Medicare) plans, 2027, Employee + 2 or more.
+// Source: CalPERS "2027 Region 1 Health Premiums (Actives and Annuitants)".
+// Ranked high to low — this is what "third-highest" and "fifth-highest" resolve to.
+export const REGION1_2027_FAMILY = [
+  { p: "PERS Platinum", v: 4624.41 },
+  { p: "Anthem Traditional HMO", v: 4504.55 },
+  { p: "Anthem Select HMO", v: 3864.74 },
+  { p: "Blue Shield Access+ HMO", v: 3845.71 },
+  { p: "Blue Shield EPO", v: 3845.71 },
+  { p: "PERS Gold", v: 3159.44 },
+  { p: "Blue Shield Trio HMO", v: 3126.68 },
+  { p: "POdRAC", v: 3115.00 },
+  { p: "Kaiser Permanente", v: 3087.84 },
+  { p: "Sutter Health Plan", v: 2939.74 },
+  { p: "Western Health Advantage HMO", v: 2680.08 },
+];
+export const PEMHCA_MIN = { 2026: 162.00, 2027: 167.00 };
+
+// The standard 10-to-20-year ladder used by Roseville, Cosumnes and El Dorado Hills.
+function ladder(y) { if (y < 10) return 0; if (y >= 20) return 1; return (50 + (y - 10) * 5) / 100; }
+// Sac Metro: 5% credit per year of employment, 100% at 20 years.
+function metroVest(y) { return Math.min(1, Math.max(0, y * 0.05)); }
+// Sacramento City: 50% at 10, 75% at 15, 100% at 20.
+function sacCityVest(y) { if (y < 10) return 0; if (y < 15) return 0.5; if (y < 20) return 0.75; return 1; }
+
+// ── pension tiers by hire date ────────────────────────────────────────────────
+// `from` is inclusive. Tiers are evaluated newest-first.
+export const PENSION_TIERS = {
+  "City of Roseville":     [{ from: 2013, f: "2.7@57", fc: "3-year (PEPRA)", lbl: "PEPRA" },
+                            { from: 0,    f: "3@50",   fc: "not stated in MOU", lbl: "Classic" }],
+  "City of Rocklin":       [{ from: 2013, f: "2.7@57", fc: "3-year (PEPRA)", lbl: "PEPRA" },
+                            { from: 0,    f: "3@50",   fc: "One-Year (GC 20042)", lbl: "Classic" }],
+  "City of Vacaville":     [{ from: 2013, f: "2.7@57", fc: "Three-Year (GC 20037)", lbl: "PEPRA" },
+                            { from: 2012.67, f: "2@50", fc: "Three-Year (GC 20037)", lbl: "Classic, hired on/after 9/1/2012" },
+                            { from: 0,    f: "3@50",   fc: "One-Year (GC 20042)", lbl: "Classic, hired before 9/1/2012" }],
+  "City of Folsom":        [{ from: 2013, f: "2.7@57", fc: "36-month", lbl: "PEPRA" },
+                            { from: 2011.8, f: "2@50", fc: "36-month", lbl: "Classic, hired on/after 10/17/2011" },
+                            { from: 0,    f: "3@50",   fc: "single highest 12 months", lbl: "Classic, hired on/before 10/16/2011" }],
+  "City of Fairfield":     [{ from: 2013, f: "2.7@57", fc: "Three-Year", lbl: "PEPRA (Tier 3)" },
+                            { from: 2012.65, f: "3@55", fc: "Three-Year", lbl: "Classic Tier 2, hired on/after 8/26/2012" },
+                            { from: 0,    f: "3@50",   fc: "Single highest year (GC 20042)", lbl: "Classic Tier 1, hired on/before 8/25/2012" }],
+  "El Dorado Hills Fire":  [{ from: 2013, f: "2.7@57", fc: "Three-Year (GC 20037)", lbl: "PEPRA (Tier 3)" },
+                            { from: 2012.91, f: "3@55", fc: "Three-Year (GC 20037)", lbl: "Classic Tier 2, hired after 11/27/2012" },
+                            { from: 0,    f: "3@50",   fc: "One-Year (GC 20042)", lbl: "Classic Tier 1, hired on/before 11/27/2012" }],
+  "Cosumnes CSD":          [{ from: 2013, f: "2.7@57", fc: "Three-Year", lbl: "PEPRA" },
+                            { from: 0,    f: "3@50",   fc: "One-Year", lbl: "Classic" }],
+  "Sacramento Metro Fire": [{ from: 2013, f: "2.7@57", fc: "not stated in MOU", lbl: "PEPRA" },
+                            { from: 0,    f: "3@50",   fc: "not stated in MOU", lbl: "Classic Safety" }],
+  "City of Sacramento":    [{ from: 2013, f: "2.7@57", fc: "36 consecutive months", lbl: "PEPRA (Tier IV)", modified: true },
+                            { from: 0,    f: "3@55",   fc: "One-year highest", lbl: "Tiers I–III", modified: true, datesUnknown: true }],
+};
+// Folsom is the only agency in the comparison that pays Social Security, so its
+// PEPRA members carry the lower pensionable-compensation cap.
+export const SOCIAL_SECURITY_AGENCIES = ["City of Folsom"];
+
+export function pensionTierFor(agency, hireYear) {
+  const list = PENSION_TIERS[agency] || [];
+  for (const t of list) if (hireYear >= t.from) return t;
+  return list[list.length - 1] || null;
+}
+
+// ── retiree medical tiers by hire date ────────────────────────────────────────
+// amt() returns { v, ok, basis }. ok:false means the dollar value is NOT derivable
+// from the contract plus a published rate table, and must be reported as unknown.
+const R1 = (n) => REGION1_2027_FAMILY[n - 1].v;   // nth-highest family premium
+
+export const RETMED_TIERS = {
+  "City of Roseville": [
+    { from: 2015.62, lbl: "Tier 4 — hired on/after 8/15/2015", vest: null,
+      amt: () => ({ v: 0, ok: true, basis: "No vested post-employment medical. The $100/mo City RHS contribution is paid while ACTIVE (after 5 yrs) and is not a retirement benefit." }) },
+    { from: 2012, lbl: "Tier 3 — hired on/after 1/1/2012", vest: ladder,
+      amt: () => ({ v: 720 * Math.pow(1.02, 14), ok: true, basis: "$720/mo base with a 2% annual escalator each 1/1 since 1/1/2013, carried to 2027 (MOU Ch.4 Art. II D). NOTE: the City's published retiree page lists maximums of $1,580 (2% Escalator Retirees) and $1,347 (MOU) for 2027, which could not be mapped to the four MOU tiers." }) },
+    { from: 2004, lbl: "Tier 2 — hired 1/1/2004–12/31/2011", vest: ladder,
+      amt: () => ({ v: 1580, ok: true, basis: "City's published 2027 maximum for 2% Escalator Retirees ($1,200 base + 2%/yr since 1/1/2013)." }) },
+    { from: 0, lbl: "Tier 1 — hired before 1/1/2004", vest: null,
+      amt: () => ({ v: 1580, ok: true, basis: "City's published 2027 maximum for 2% Escalator Retirees. No vesting schedule stated for this tier." }) },
+  ],
+  "City of Rocklin": [
+    { from: 2025.5, lbl: "Hired on/after 7/1/2025", vest: null,
+      amt: () => ({ v: null, ok: false, basis: "Deliberately unnegotiated. Art. 5: to be negotiated immediately following the 2025–2028 MOU." }) },
+    { from: 0, lbl: "Employed or retired as of 6/30/2025", vest: null,
+      amt: () => ({ v: 1200, ok: true, basis: "$1,200/mo maximum, 100% to every eligible retiree. Vesting schedule rescinded in the 2018 MOU." }) },
+  ],
+  "Cosumnes CSD": [
+    { from: 0, lbl: "Tier 2 — retiring on/after 1/1/2015", vest: ladder, vestFrom: 2010.5,
+      amt: () => ({ v: R1(9) - 225, ok: true, basis: "100% of the applicable monthly rate less the $225 full-family retiree share. Priced on Kaiser family 2027 ($3,087.84), the lowest-cost HMO named in their Tier 1 language — a richer plan choice raises this. Converts to a $600/mo cap at Medicare age." }) },
+  ],
+  "El Dorado Hills Fire": [
+    { from: 0, lbl: "All tiers — same level as active employees", vest: ladder, vestFrom: 2012.91,
+      amt: () => ({ v: R1(5), ok: true, basis: "100% of the fifth-highest CalPERS Region 1 plan, family tier, 2027 = $3,845.71 (Blue Shield EPO; tied with Blue Shield Access+ at rank 4–5)." }) },
+  ],
+  "Sacramento Metro Fire": [
+    { from: 0, lbl: "All retirees, Basic or Combination plans", vest: metroVest, vestFrom: 2011.92,
+      amt: () => ({ v: 0.92 * R1(3), ok: true, basis: "92% of premium, capped at the third-highest Region 1 plan, family tier, 2027 = Anthem Select $3,864.74. 100% of that cap once Medicare-eligible." }) },
+  ],
+  "City of Vacaville": [
+    { from: 2020, lbl: "Tier 3 — hired on/after 1/1/2020", vest: null, svcStipend: true,
+      amt: () => ({ v: PEMHCA_MIN[2027], ok: true, basis: "PEMHCA minimum ($167/mo in 2027) plus a direct service-based payment: $100/mo at 10–15 yrs, $150 at 15–20, $200 at 20+." }) },
+    { from: 0, lbl: "Tiers 1 and 2 — hired before 1/1/2020", vest: null,
+      amt: () => ({ v: null, ok: false, basis: "Governed by City Resolutions 2019-117 and 2019-118, which the MOU references but does not contain. Not read." }) },
+  ],
+  "City of Folsom": [
+    { from: 2007.35, lbl: "Hired after 5/8/2007", vest: null,
+      amt: () => ({ v: 0, ok: true, basis: "No vested retiree medical. The $25/pay-period HRA (about $54/mo) is paid while ACTIVE and is not a retirement benefit." }) },
+    { from: 0, lbl: "Hired on/before 5/8/2007", vest: null,
+      amt: () => ({ v: null, ok: false, basis: "Equals the City's active-employee contribution, capped at the 1/1/2012 level plus CPI (max 3%/yr). The 1/1/2012 base amount is not in the MOU." }) },
+  ],
+  "City of Sacramento": [
+    { from: 2020, lbl: "Hired on/after 1/1/2020", vest: null,
+      amt: () => ({ v: 0, ok: true, basis: "“No employee hired on or after January 1, 2020, shall be eligible for any retiree insurance contributions provided by this Section.”" }) },
+    { from: 0, lbl: "Hired on/before 12/31/2019", vest: sacCityVest,
+      amt: () => ({ v: null, ok: false, basis: "Lowest-cost $25-copay medical plan for one, plus lowest-cost PPO dental for one, plus $25. The $25-copay plan design is not identifiable in the CalPERS Region 1 rate table, so this cannot be priced." }) },
+  ],
+  "City of Fairfield": [
+    { from: 0, lbl: "All retirees", vest: null,
+      amt: () => ({ v: 0, ok: true, basis: "“Retirees are responsible for paying the full cost of the premium.” The $75/mo RHS contribution is paid while ACTIVE and is not a retirement benefit." }) },
+  ],
+};
+
+export function retmedTierFor(agency, hireYear) {
+  const list = RETMED_TIERS[agency] || [];
+  for (const t of list) if (hireYear >= t.from) return t;
+  return list[list.length - 1] || null;
+}
+
+// ── the combined figure ───────────────────────────────────────────────────────
+export function retirementValue(agency, pensionableMonthly, opts) {
+  const hireYear = opts.hireYear, years = opts.years, age = opts.age;
+  const out = { notes: [] };
+
+  const pt = pensionTierFor(agency, hireYear);
+  const isPEPRA = pt && pt.f === "2.7@57";
+  const tbl = PENSION_FACTORS[pt ? pt.f : "2.7@57"];
+  const a = Math.max(PENSION_MIN_AGE, Math.min(60, age));
+  const factor = (tbl[a] || 0) / 100;
+
+  // PEPRA caps pensionable compensation; Classic is capped far higher by IRC 401(a)(17).
+  let fc = pensionableMonthly || 0;
+  let capped = false;
+  if (isPEPRA) {
+    const annual = SOCIAL_SECURITY_AGENCIES.indexOf(agency) !== -1 ? PEPRA_CAP.withSS : PEPRA_CAP.noSS;
+    const cap = annual / 12;
+    if (fc > cap) { fc = cap; capped = true; }
+  }
+  out.formula = pt ? pt.f : null;
+  out.formulaLabel = pt ? pt.lbl : null;
+  out.finalCompBasis = pt ? pt.fc : null;
+  out.factor = factor;
+  out.pensionable = pensionableMonthly || 0;
+  out.cappedPensionable = fc;
+  out.capped = capped;
+  out.pension = factor * years * fc;
+  if (capped) out.notes.push("Pensionable pay exceeds the PEPRA cap (" + (SOCIAL_SECURITY_AGENCIES.indexOf(agency) !== -1 ? "$159,733" : "$191,679") + "/yr, 2026 limits) — the pension is computed on the capped figure.");
+  if (pt && pt.modified) out.notes.push("The MOU calls this a “Modified” formula, which in CalPERS usage means coordination with Social Security and a reduction to final compensation. This agency is carried elsewhere in the tool as paying no Social Security, so no reduction is applied here. Unresolved.");
+  if (pt && pt.datesUnknown) out.notes.push("Hire-date boundaries for this agency's earlier tiers are not stated in the MOU.");
+  if (pt && /not stated/.test(pt.fc || "")) out.notes.push("The final compensation averaging period is not stated in this agency's MOU.");
+
+  const mt = retmedTierFor(agency, hireYear);
+  out.medTierLabel = mt ? mt.lbl : null;
+  if (!mt) { out.medical = null; out.medicalOk = false; }
+  else {
+    const r = mt.amt();
+    out.medicalBasis = r.basis;
+    if (!r.ok) { out.medical = null; out.medicalOk = false; out.notes.push(r.basis); }
+    else {
+      let v = r.v;
+      // Vesting applies only where the tier carries a ladder AND the hire date falls
+      // inside the window that made vesting a condition.
+      if (mt.vest && (mt.vestFrom === undefined || hireYear >= mt.vestFrom)) {
+        out.vestPct = mt.vest(years);
+        v = v * out.vestPct;
+      } else { out.vestPct = 1; }
+      if (mt.svcStipend) {
+        const st = years >= 20 ? 200 : years >= 15 ? 150 : years >= 10 ? 100 : 0;
+        v += st; out.stipend = st;
+      }
+      out.medical = v; out.medicalOk = true;
+    }
+  }
+  out.total = out.medicalOk ? out.pension + out.medical : null;
+  return out;
+}
+
+export const RETIRE_SOURCES = [
+  "Benefit factors: CalPERS “Retirement Formulas and Benefit Factors” charts for Local Safety 3%@50, 3%@55, 2%@50 and 2.7%@57, read 11/11/2026.",
+  "PEPRA cap: CalPERS Circular Letter 200-001-26, 2026 limits — $191,679 without Social Security, $159,733 with. 2027 limits were not yet published.",
+  "Premiums: CalPERS 2027 Region 1 Health Premiums (Actives and Annuitants), Employee + 2 or more.",
+  "PEMHCA minimum: City of Roseville published retiree PEMHCA page — $162.00/mo for 2026, $167.00/mo for 2027.",
+  "Retirement formulas and retiree medical terms: each agency's MOU in the Comparable LMA Docs folder, except Sacramento Metro Fire, read from the District's published MOU because both local copies are saved web pages.",
+];
