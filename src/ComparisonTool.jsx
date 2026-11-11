@@ -510,7 +510,12 @@ export default function ComparisonTool() {
   function resetAgencies() { setAgenciesOn(new Set(COMPARABLE_NAMES)); }
   const allAgenciesOn = COMPARABLE_NAMES.every(n => agenciesOn.has(n));
   const [note, setNote] = useState(null);
-  const [admin, setAdmin] = useState(() => { try { return localStorage.getItem("rff_admin") === "1"; } catch (e) { return false; } });
+  // ADMIN LOCK IS SESSION-ONLY. Deliberately NOT read from localStorage: the PIN must be
+  // entered again on every page load, so the private tabs are never already open on a
+  // laptop at a public meeting or on a projector. Previously this persisted, which meant
+  // one unlock left that browser unlocked permanently. Same philosophy as the Classic /
+  // years / pensionable toggles below. Only City 55% and True 55% are public.
+  const [admin, setAdmin] = useState(false);
   const [persMode, setPersMode] = useState(false);
   // Classic PERS mode: Engineer and Captain tabs only. Deliberately NOT persisted to
   // localStorage and NOT carried in the URL - it resets to OFF on every load so these
@@ -524,7 +529,9 @@ export default function ComparisonTool() {
   // Pensionable-income view. Session-only like the others: the contractual comparison is
   // total compensation, so this resets to OFF on every load.
   const [pensMode, setPensMode] = useState(false);
-  useEffect(() => { try { localStorage.setItem("rff_admin", admin ? "1" : "0"); } catch (e) {} }, [admin]);
+  // Clear the retired persisted-unlock key once, so a browser that was left unlocked
+  // under the old behaviour does not keep a stale "rff_admin=1" sitting in storage.
+  useEffect(() => { try { localStorage.removeItem("rff_admin"); } catch (e) {} }, []);
   useEffect(() => { if (!admin && METHODOLOGIES.find(m => m.id === activeMethodology)?.private) setActiveMethodology("true55"); }, [admin, activeMethodology]);
   function toggleAdmin() {
     if (admin) { setAdmin(false); return; }
