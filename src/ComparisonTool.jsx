@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, verifiedSummary, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -197,7 +197,6 @@ function baseLink(name, content) {
 const METHODOLOGIES = [
   { id: "roseville", label: "City 55%", active: true },
   { id: "true55",    label: "True 55%", active: true },
-  { id: "verify",    label: "\u2713 Verification", active: true, private: true },
   { id: "engineer",  label: "Engineer", active: true, private: true },
   { id: "captain",   label: "Captain", active: true, private: true },
   { id: "bc",        label: "BC", active: true, private: true },
@@ -206,9 +205,9 @@ const METHODOLOGIES = [
   { id: "otvalue",   label: "OT Savings", active: true, private: true },
   { id: "strategies",label: "Strategies", active: true, private: true },
 ];
+const EMPTY_VERIFY = Object.freeze({}); // Verification tab retired - see note at verifyData
 const ADMIN_PIN = "1592"; // change to any code; private tabs + all editing unlock with this PIN
 const PERS_KEYS = ["tc_ffMedicMonthly", "tc_ed", "tc_special", "tc_longevity", "tc_holiday"]; // PERSable components
-const VERIFY_CATS = TRUE_COLUMNS.filter(c => !["raise2026","raise2027","raise2028","tc_monthlyGross"].includes(c.key));
 
 // Binary search: finds the 2028 raise % that brings Roseville's monthly gross
 // to exactly the 55th percentile gross, accounting for cascading effects.
@@ -361,25 +360,16 @@ export default function ComparisonTool() {
   // On/after: Art. IX Service Term Bonus, excluded from special comp by Art. XI,
   // capped at 5.0%. This is global state so every tab answers the same question.
   const [hiredPost2017, setHiredPost2017] = useState(false);
-  // Verification tracker state lives HERE, above every consumer, so the shared dataset
-  // below can be built before buildAgencies/buildTrueComp run.
-  const [verifyData, setVerifyData] = useState(() => {
-    try {
-      const main = JSON.parse(localStorage.getItem("rff_verify_v1") || "{}");
-      if (main && Object.keys(main).length) return main;
-      // main is empty — recover from the auto-backup if one exists
-      const bak = JSON.parse(localStorage.getItem("rff_verify_v1_bak") || "{}");
-      return (bak && Object.keys(bak).length) ? bak : {};
-    } catch (e) { return {}; }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem("rff_verify_v1", JSON.stringify(verifyData));
-      // keep a redundant backup, but ONLY when there is real data, so an accidental
-      // empty never overwrites the last good copy
-      if (verifyData && Object.keys(verifyData).length) localStorage.setItem("rff_verify_v1_bak", JSON.stringify(verifyData));
-    } catch (e) {}
-  }, [verifyData]);
+  // VERIFICATION TAB RETIRED 11/10/2026. Every verified figure was folded into the sourced
+  // DATA array in agencyData.js, which is now the single source of truth. Measured before
+  // retiring it: the corrected tracker agreed with DATA on 170 of 171 fields, so City 55%
+  // moved 0.000 points, True 55% 0.020, and the worst of 64 rank-tab states 0.0074 - all of
+  // it the one unresolved Fairfield medical figure, now carried in DATA and flagged in
+  // OPEN_ITEMS. This also retires the browser-localStorage dependency: the headline used to
+  // live in rff_verify_v1, where a cache clear silently changed it with nothing to signal
+  // the change. Kept as an empty constant so every downstream call site is unchanged and
+  // verifiedDataset() falls through to the sourced figure for every field.
+  const verifyData = EMPTY_VERIFY;
   // ONE dataset for every tab, so a Verification correction reaches the City 55%, True 55%
   // and rank tabs alike instead of only the rank tabs. Where a Verification cell is empty
   // the sourced figure is used, so an unfilled tracker changes nothing.
@@ -657,8 +647,7 @@ export default function ComparisonTool() {
   }
   function resetTrueEdits() { setTrueEdits({}); setCityOpsMode(false); } // also restores comparables' Special Ops
 
-  // ---- MOU Verification Tracker (persists to localStorage; export/import for safety) ----
-  const [verifyMeta, setVerifyMeta] = useState(() => { try { return JSON.parse(localStorage.getItem("rff_verify_meta") || "{}"); } catch (e) { return {}; } });
+  // ---- per-tab persisted UI state ----
   const [strategies, setStrategies] = useState(() => { try { return localStorage.getItem("rff_strategies") || ""; } catch (e) { return ""; } });
   useEffect(() => { try { localStorage.setItem("rff_strategies", strategies); } catch (e) {} }, [strategies]);
   const [dealR28, setDealR28] = useState(() => { try { return localStorage.getItem("rff_deal_r28") || "0"; } catch (e) { return "0"; } });
@@ -670,25 +659,6 @@ export default function ComparisonTool() {
   const [rankFill, setRankFill] = useState(() => { try { return JSON.parse(localStorage.getItem("rff_rankfill") || "{}"); } catch (e) { return {}; } });
   useEffect(() => { try { localStorage.setItem("rff_rankfill", JSON.stringify(rankFill)); } catch (e) {} }, [rankFill]);
   const setRankCell = (rank, agency, field, val) => setRankFill(p => ({ ...p, [rank]: { ...(p[rank]||{}), [agency]: { ...((p[rank]||{})[agency]||{}), [field]: val } } }));
-  useEffect(() => { try { localStorage.setItem("rff_verify_meta", JSON.stringify(verifyMeta)); } catch (e) {} }, [verifyMeta]);
-  const verifySummary = useMemo(() => verifiedSummary(verifyData, null), [verifyData]);
-  function setVerify(agency, key, value) { setVerifyData(prev => ({ ...prev, [agency]: { ...prev[agency], [key]: value } })); setVerifyMeta(m => ({ ...m, modifiedAt: Date.now() })); }
-  function exportVerify() {
-    try {
-      const blob = new Blob([JSON.stringify(verifyData, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url;
-      a.download = "rff-verification-" + (() => { const d = new Date(); const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}`; })() + ".json";
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      setVerifyMeta(m => ({ ...m, exportedAt: Date.now() }));
-    } catch (e) {}
-  }
-  function importVerify(e) {
-    const file = e.target.files && e.target.files[0]; if (!file) return;
-    const r = new FileReader();
-    r.onload = () => { try { const d = JSON.parse(r.result); if (d && typeof d === "object") { setVerifyData(d); setVerifyMeta(m => ({ ...m, exportedAt: Date.now(), modifiedAt: Date.now() - 1 })); } } catch (err) { if (typeof window !== "undefined") window.alert("Could not read that file."); } };
-    r.readAsText(file); e.target.value = "";
-  }
   function trueRaiseCell(name, key) {
     const src = AGENCY_INPUTS.find(a => a.name === name);
     if (!src) return "\u2014";
@@ -1018,122 +988,6 @@ export default function ComparisonTool() {
                   <div style={{ marginTop: "20px", fontSize: "12px", color: C.textDim }}>
                     Switch back to <span style={{ color: C.accent, cursor: "pointer", fontWeight: "600" }} onClick={() => setActiveMethodology("roseville")}>Roseville Methodology</span> to use the live tool.
                   </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {activeMethodology === "verify" && (
-            <section style={{ marginTop: "0", paddingBottom: "12px" }}>
-              <div className="wrap">
-                <div className="sec-head fade">
-                  <div className="sec-tag">MOU Verification Checklist</div>
-                  <div className="sec-title">Data Verification Tracker</div>
-                  <div className="sec-sub">Work through the MOUs at your own pace. Type the value you verified into any box &mdash; empty means not checked yet. Unchecked boxes start <span style={{ color: "#8a6d12", fontWeight: 700 }}>highlighted</span> so you can see what&rsquo;s left; a matching entry turns neutral, and a discrepancy flags <span style={{ color: C.danger, fontWeight: 700 }}>red</span>. Progress saves automatically in this browser &mdash; <strong>Export a backup regularly</strong> so you can never lose it.</div>
-                </div>
-                {(() => {
-                  const vs = verifySummary;
-                  const raiseLbl = (p) => p==null ? "\u2014" : (Math.abs(p)<0.005 ? "At 55th \u2713" : (p>0?"+":"")+p.toFixed(2)+"%");
-                  const rcolor = (p) => p==null ? C.textDim : p>0.05 ? C.danger : C.green;
-                  const box = (title, sub, raiseP, rose, pctV) => (
-                    <div style={{ flex:1, minWidth:"210px", background:`linear-gradient(180deg, rgba(154,118,54,0.08), ${C.bg})`, border:`1px solid ${C.gold}`, borderRadius:"12px", padding:"14px 18px" }}>
-                      <div style={{ fontSize:"12px", fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.5px" }}>{title}</div>
-                      <div style={{ fontSize:"10.5px", color:C.textDim, marginTop:"1px" }}>{sub}</div>
-                      <div style={{ fontFamily:"'Inter',system-ui,sans-serif", fontWeight:700, fontSize:"28px", color:rcolor(raiseP), marginTop:"6px", lineHeight:1 }}>{raiseLbl(raiseP)}</div>
-                      <div style={{ fontSize:"11px", color:C.textMuted, marginTop:"4px" }}>Roseville ${Math.round(rose||0).toLocaleString()} vs 55th ${Math.round(pctV||0).toLocaleString()}</div>
-                    </div>
-                  );
-                  return (
-                    <div className="fade" style={{ display:"flex", gap:"12px", flexWrap:"wrap", marginBottom:"14px" }}>
-                      {box("City LMA Raise Needed", "City method (base+incentives+benefits) \u2014 from your verified data", vs.cityRaise, vs.roseCity, vs.cityPct)}
-                      {box("True Total Comp Raise Needed", "Full comp incl. leave \u2014 from your verified data", vs.trueRaise, vs.roseTrue, vs.truePct)}
-                    </div>
-                  );
-                })()}
-                <div className="fade" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "14px" }}>
-                  {(() => {
-                    const agencies = trueRows.filter(r => !r.isPercentile);
-                    const total = agencies.length * VERIFY_CATS.length;
-                    let done = 0, mism = 0;
-                    agencies.forEach(r => VERIFY_CATS.forEach(c => { const v = verifyData[r.name] && verifyData[r.name][c.key]; if (v !== undefined && v !== "") { done++; const n = parseFloat(String(v).replace(/[^0-9.\-]/g, "")); const cr = (AGENCY_RAW[r.name] && AGENCY_RAW[r.name][c.key]) ? AGENCY_RAW[r.name][c.key].v : null; if (!isNaN(n) && cr != null && Math.round(n * 100) !== Math.round(cr * 100)) mism++; } }));
-                    const pct = total ? Math.round(done / total * 100) : 0;
-                    return (<>
-                      <div style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>{done} / {total} verified <span style={{ color: C.textDim, fontWeight: 400 }}>({pct}%)</span></div>
-                      {mism > 0 && <div style={{ fontSize: "12px", color: C.danger, fontWeight: 700 }}>{mism} mismatch{mism > 1 ? "es" : ""} flagged</div>}
-                      <div style={{ flex: 1, minWidth: "120px", maxWidth: "280px", height: "8px", background: C.surface, borderRadius: "4px", overflow: "hidden" }}><div style={{ width: pct + "%", height: "100%", background: C.green }} /></div>
-                    </>);
-                  })()}
-                  <button onClick={exportVerify} className="chip" style={{ background: "rgba(73,89,45,0.12)", color: C.accent, border: `1px solid ${C.accent}` }}>&#8681; Export backup</button>
-                  <label className="chip" style={{ background: C.surface, color: C.text, border: `1px solid ${C.border}`, cursor: "pointer" }}>&#8679; Import<input type="file" accept="application/json" onChange={importVerify} style={{ display: "none" }} /></label>
-                </div>
-                {(() => {
-                  const anyData = Object.keys(verifyData).some(a => Object.values(verifyData[a] || {}).some(v => v !== undefined && v !== ""));
-                  const unsaved = anyData && (verifyMeta.modifiedAt || 0) > (verifyMeta.exportedAt || 0);
-                  if (!unsaved) return null;
-                  const mins = verifyMeta.exportedAt ? Math.round((Date.now() - verifyMeta.exportedAt) / 60000) : null;
-                  const ago = mins == null ? null : mins < 1 ? "just now" : mins < 60 ? mins + " min ago" : Math.round(mins / 60) + " hr ago";
-                  return (
-                    <div className="fade" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "14px", background: "rgba(151,114,47,0.12)", border: `1px solid ${C.gold}`, borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: C.textMuted }}>
-                      <span>&#9888;&#65039; <strong style={{ color: C.gold }}>Unsaved verification work.</strong> {verifyMeta.exportedAt ? `Last backup ${ago} — you've made changes since.` : "You haven't exported a backup yet."} Export now so a browser hiccup can't lose it.</span>
-                      <button onClick={exportVerify} className="chip" style={{ background: C.gold, color: "#fff", border: `1px solid ${C.gold}`, marginLeft: "auto" }}>&#8681; Export backup now</button>
-                    </div>
-                  );
-                })()}
-                <div className="tool-frame fade">
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "1100px" }}>
-                      <thead>
-                        <tr>
-                          <th style={{ ...thBase, background: C.surface, position: "sticky", left: 0, zIndex: 3, borderRight: `2px solid ${C.border}`, color: C.textMuted, fontSize: "11px", minWidth: "150px" }}>Agency</th>
-                          {VERIFY_CATS.map(c => <th key={c.key} style={{ ...thBase, background: C.surface, borderLeft: `1px solid ${C.border}`, color: C.textMuted, fontSize: "10px", textAlign: "right", minWidth: "94px" }}>{c.label}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {trueRows.filter(r => !r.isPercentile).map((row, ri) => (
-                          <tr key={row.name} style={{ background: row.highlight ? "rgba(154,118,54,0.08)" : ri % 2 === 0 ? C.card : C.surface }}>
-                            <td style={{ ...tdBase, position: "sticky", left: 0, zIndex: 1, background: row.highlight ? "rgba(154,118,54,0.12)" : (ri % 2 === 0 ? C.card : C.surface), borderRight: `2px solid ${C.border}`, fontWeight: row.highlight ? "700" : "600", color: row.highlight ? C.gold : C.text, fontSize: "12px" }}>
-                              {row.highlight ? "⭐ " : ""}{nameLink(row.name)}
-                              {(() => { const d = VERIFY_CATS.filter(c => { const v = verifyData[row.name] && verifyData[row.name][c.key]; return v !== undefined && v !== ""; }).length; return <div style={{ fontSize: "10px", color: C.textDim, fontWeight: 400 }}>{d}/{VERIFY_CATS.length} checked</div>; })()}
-                              {(() => { const t = verifySummary.trueTotals[row.name]; return t==null?null:<div style={{ fontSize: "11px", color: row.highlight?C.gold:C.accent, fontWeight: 700, marginTop:"2px" }}>${Math.round(t).toLocaleString()}/mo</div>; })()}
-                            </td>
-                            {VERIFY_CATS.map(c => {
-                              const raw = (AGENCY_RAW[row.name] && AGENCY_RAW[row.name][c.key]) || { v: null, u: "" };
-                              const curRaw = raw.v;                 // tool's MOU-native figure (%, hrs, or $)
-                              const monthly = row[c.key];           // the dollar impact
-                              const v = (verifyData[row.name] && verifyData[row.name][c.key]) ?? "";
-                              const filled = v !== "";
-                              const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
-                              const mismatch = filled && !isNaN(n) && curRaw != null && Math.round(n * 100) !== Math.round(curRaw * 100);
-                              const border = !filled ? "#b8901f" : mismatch ? C.danger : C.border;
-                              const bg = !filled ? "rgba(245,214,90,0.18)" : mismatch ? "rgba(178,58,70,0.10)" : "transparent";
-                              const inBg = !filled ? "rgba(245,214,90,0.5)" : C.card;
-                              const locked = !!(VERIFIED_LOCKED[row.name] && VERIFIED_LOCKED[row.name].includes(c.key));
-                              const noteTxt = getNote(row.name, c.key);
-                              const noteEdited = noteEdits[row.name + "|" + c.key] !== undefined;
-                              const moTxt = monthly == null ? "" : (c.key === "tc_topStepHrly" ? "" : " = $" + Math.round(monthly).toLocaleString() + "/mo");
-                              return (
-                                <td key={c.key} style={{ ...tdBase, borderLeft: `1px solid rgba(140,152,166,0.3)`, textAlign: "right", padding: "4px 6px", background: locked ? "rgba(79,122,60,0.10)" : bg }}>
-                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
-                                    {locked ? (<span title="Verified & locked" style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "3px", width: "66px", padding: "3px 5px", borderRadius: "4px", background: "rgba(79,122,60,0.14)", border: `1.5px solid ${C.green}`, color: C.green, fontSize: "11px", fontWeight: "700" }}><span style={{ fontSize: "10px" }}>{"✓"}</span>{curRaw == null ? "\u2014" : curRaw}</span>) : (<input value={v} onChange={e => setVerify(row.name, c.key, e.target.value)} placeholder={curRaw != null ? String(curRaw) : "—"} title={raw.u} style={{ width: "66px", background: inBg, border: `1.5px solid ${border}`, borderRadius: "4px", color: mismatch ? C.danger : C.text, fontSize: "11px", fontWeight: filled ? "700" : "400", padding: "3px 5px", textAlign: "right", outline: "none", fontFamily: "inherit" }} />)}
-                                    {noteTxt && <span role="button" title="Source note (click to view/edit)" onClick={e => { e.stopPropagation(); openNote(e, `${row.shortName || row.name} · ${c.label}`, noteTxt, { agency: row.name, key: c.key }, (c.key === "tc_ffMedicMonthly" || c.key === "tc_topStepHrly") ? RAISE_CALC[row.name] : null); }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "15px", height: "15px", borderRadius: "50%", flex: "0 0 auto", cursor: "pointer", fontFamily: "Georgia,serif", fontStyle: "italic", fontWeight: "700", fontSize: "11px", lineHeight: "1", color: noteEdited ? C.gold : C.accent, border: `1.5px solid ${noteEdited ? C.gold : C.accent}`, background: noteEdited ? "rgba(151,114,47,0.18)" : "rgba(154,118,54,0.12)" }}>i</span>}
-                                  </div>
-                                  <div style={{ fontSize: "9px", color: mismatch ? C.danger : C.textDim, textAlign: "right", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mismatch ? "≠ " : ""}{curRaw == null ? "—" : curRaw}{raw.u ? (" " + raw.u.replace(" of base", "%").replace("% of base", "%")) : ""}</div>
-                                  {moTxt && <div style={{ fontSize: "8px", color: C.textDim, textAlign: "right" }}>{moTxt}</div>}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div className="foot fade">
-                  <strong style={{ color: C.textMuted }}>How this works:</strong><br />
-                  &middot; Type the value you verified from the MOU. The grey number is what the tool currently uses &mdash; if yours differs, the box turns red with a &ne;.<br />
-                  &middot; Dollar categories are monthly; &ldquo;Top Step Hrly&rdquo; is the hourly rate. Click a box&rsquo;s source elsewhere in the tool to see the MOU basis.<br />
-                  &middot; Your work saves in this browser automatically, but <strong>Export a backup often</strong> &mdash; a browser cache clear would wipe localStorage.<br />
-                  &middot; When an agency is done or you&rsquo;ve flagged mismatches, tell Watson and the confirmed numbers get baked into the live data.
                 </div>
               </div>
             </section>

@@ -38,15 +38,16 @@ ls -la ~/Development/rff-regional-comparison/src/
 md5 ~/Development/rff-regional-comparison/src/agencyData.js ~/Development/rff-regional-comparison/src/ComparisonTool.jsx
 ```
 
-Current build (2026-11-10, Classic PERS + longevity years + pensionable income):
+Current build (2026-11-11, Verification tab removed - = snapshots/2026-11-11-no-verify-tab):
+```
+agencyData.js       7f33a6add1d55ab4fc461652510e818f   129838 bytes
+ComparisonTool.jsx  39967d5602f3a3618dacddf347f65da1   210199 bytes
+```
+Previous build, also good (2026-11-10, last one with the Verification tab
+- = snapshots/2026-11-11-pre-verify-removal):
 ```
 agencyData.js       6a4f3cc78a2cc9511c4353b3c2ccbc30   128560 bytes
 ComparisonTool.jsx  7613ed0f7ce953ec91dae877f63ea055   225733 bytes
-```
-Previous build, also good (pre-Classic, = snapshots/2026-11-10-verified):
-```
-agencyData.js       eed729db21d5b060cd303bb39b45a5ea   104668 bytes
-ComparisonTool.jsx  449554b950faafdc25edb95087070604   202240 bytes
 ```
 These md5s change with every release. **The size check above is the real guard** - it is
 what would have caught the May 2026 disaster. Do not treat an unlisted md5 as a failure.
@@ -54,7 +55,7 @@ what would have caught the May 2026 disaster. Do not treat an unlisted md5 as a 
 ## Reset to the verified baseline
 
 ```
-cp ~/Development/rff-regional-comparison/snapshots/2026-11-10-verified/*.js* \
+cp ~/Development/rff-regional-comparison/snapshots/2026-11-11-no-verify-tab/*.js* \
    ~/Development/rff-regional-comparison/src/ && \
 cd ~/Development/rff-regional-comparison && npm run deploy
 ```
@@ -66,8 +67,17 @@ README with md5 fingerprints.
 ## Resetting the tool's own inputs
 
 For raises, Special Ops, Longevity and Other Pay, use the **in-app Reset buttons** on the
-City 55% and True Comp tabs. That is the real reset. Do not re-deploy old code to undo an
-input change — the Verification tab lives in browser localStorage, not in these files.
+City 55% and True Comp tabs. That is the real reset.
+
+**Changed 2026-11-11: the Verification tab is gone.** Every verified figure now lives in the
+`DATA` array in `agencyData.js`, so the headline no longer depends on browser localStorage
+and there is nothing to import. A code rollback now DOES fully revert the data - which was
+not true before. The trade: correcting a figure is a code edit plus a deploy, not a browser
+edit.
+
+Current headline: **City 2.66% / True 9.57%**. Roseville $14,128.82 against a 55th
+percentile of $14,430.61 on the City method. If the site shows 3.68%, that is a stale
+cached build or stale localStorage from the old tab - hard refresh with Cmd+Shift+R.
 
 ## Do not
 
