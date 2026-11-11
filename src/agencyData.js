@@ -1260,3 +1260,160 @@ export const TIMEBANK_BRIEF = {
   sourcing: "Every MOU provision cited here was read in the source document and is recorded with section and page in the extraction files held in the Comparable LMA Docs folder. Bank utilization figures are the City's own, as reported by HR. Items marked RFF POSITION are not yet documented.",
   caveat: "Not legal advice. Past-practice doctrine and administrative filing deadlines are legal questions for RFF's counsel.",
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RETIREE MEDICAL — nine Sacramento-region agencies
+// Read from the source MOUs on 2026-11-11. Every figure below is quoted or
+// paraphrased from the contract named in `cite`. Nothing is computed.
+// Sac Metro is the one agency NOT read from the local MOU collection: both local
+// files are saved web-viewer pages rather than PDFs, so it was read from the
+// District's own published MOU at metrofire.ca.gov.
+// ─────────────────────────────────────────────────────────────────────────────
+export const RETIREE_MEDICAL = {
+  title: "What Each Agency Gives You For Medical When You Retire",
+  sub: "Employer contribution toward retiree health · nine Sacramento-region agencies · every hire-date tier · read from the source MOUs 11/11/2026",
+  confidential: "CONFIDENTIAL — IAFF LOCAL 1592",
+
+  pemhca: "Every CalPERS agency must pay a statutory minimum toward an eligible retiree's medical premium — the PEMHCA minimum employer contribution under Government Code §22892. For 2026 that is $162.00 per month; for 2027, $167.00. Where a row below says “PEMHCA minimum only,” that is the floor every agency already has to pay, not a negotiated benefit.",
+
+  // ── per-agency detail, every tier ──────────────────────────────────────────
+  agencies: [
+    { a: "City of Roseville", rsv: true, cite: "RFF MOU 2026–2029, Ch. 4 Art. II",
+      lead: "Four tiers. The City's baseline maximum monthly contribution for each eligible retiree equals the PEMHCA minimum; everything above that is the tier benefit.",
+      tiers: [
+        { t: "Tier 1 — hired before 1/1/2004", b: "Up to **$1,200/mo**, with a **2% annual escalator** each January 1 (since 1/1/13).", v: "None stated" },
+        { t: "Tier 2 — hired 1/1/2004 to 12/31/2011", b: "Up to **$1,200/mo** + 2% annual escalator.", v: "Vesting ladder. 5 yrs Roseville service required; 10 yrs CalPERS-credited service to be eligible at all." },
+        { t: "Tier 3 — hired on/after 1/1/2012", b: "**$720/mo** + 2% annual escalator. Must reach normal retirement age. Minimum 10 years of Roseville service for anything above the PEMHCA minimum. Employee pays 1% of base per year for the first 5 years, capping at **5% of base**.", v: "Vesting ladder" },
+        { t: "Tier 4 — hired on/after 8/15/2015", b: "**No vested post-employment medical benefit of any kind.** Instead the employee contributes 1% of base at hire, rising 1%/yr to a **5% of base** maximum, into an RHS account. After 5 years of service the City adds **$100/mo** to that account until retirement or separation.", v: "N/A — nothing to vest in", bad: true },
+      ],
+      notes: ["Vesting ladder (Art. II E): 10 yrs = 50% of the City contribution, rising 5 points per year, 20+ yrs = 100%.",
+              "Tier 3 and Tier 4 employee contributions are mandatory, irrevocable, and forfeited entirely if the employee leaves before vesting."] },
+
+    { a: "Cosumnes CSD", cite: "Cosumnes MOU 2025–2027, Appendix C §II–III",
+      lead: "The most generous of the nine — and the most expensive to the employee.",
+      tiers: [
+        { t: "Tier 2 — retiring on/after 1/1/2015", b: "District pays **100% of the applicable monthly rate minus a retiree share**: **$85** employee-only, **$175** employee + one, **$225** full family. At Medicare eligibility this converts to a reimbursement **capped at $600/mo**. Retirees who never qualify for Medicare keep the CalPERS Region 1 reimbursement.", v: "Hired on/after 7/1/2010: 5 yrs Cosumnes service to qualify, then the vesting ladder from 10 yrs" },
+        { t: "Tier 1 — retired on/before 12/31/2014", b: "District pays the premium for the lowest-cost HMO (Kaiser or Blue Shield Access+), with a retiree share of **$0** employee-only / **$15** two-party or family.", v: "Same ladder for post-7/1/2010 hires" },
+      ],
+      notes: ["**Employees contribute 4.5% of base salary** to an irrevocable medical trust — 3% under Side Letter 2018-04 plus 1.5% effective 7/1/2021, in exchange for the District putting $2.4M/yr district-wide into the OPEB trust. Pre-tax.",
+              "Must retire through CalPERS within 120 days of the last day worked.",
+              "Vesting ladder: 10 yrs = 50%, rising 5 points per year, 20+ = 100%."] },
+
+    { a: "El Dorado Hills Fire", cite: "EDH MOU 2026–2029, Art. IX.C",
+      lead: "Retirees are held at the same contribution level as active employees.",
+      tiers: [
+        { t: "Hired before 3/1/2012", b: "Benefits in retirement **at the same level provided to current personnel**, as negotiated from time to time — whether or not the Department stays in CalPERS.", v: "None stated" },
+        { t: "Hired after 2/29/2012", b: "Department contribution **at the same level as current employees**, defined by Government Code §22893. The active level is **100% of the fifth-highest cost plan in CalPERS Region 1** at the tier elected.", v: "Vesting ladder. Needs 5 yrs EDH CalPERS service AND 10 yrs total CalPERS service" },
+      ],
+      notes: ["Dental and vision continue into retirement at a maximum contribution level of employee + one. Hired on/after 10/1/2013 need 10 years of EDH CalPERS service for that.",
+              "Vesting ladder: 10 yrs = 50%, rising 5 points per year, 20+ = 100%."] },
+
+    { a: "Sacramento Metro Fire", cite: "Sac Metro / Local 522 MOU, Art. 16 — read from the District's published MOU, NOT from the local file", webonly: true,
+      lead: "A percentage of premium rather than a flat dollar amount.",
+      tiers: [
+        { t: "All retirees, Basic or Combination plans", b: "District contributes **92% of the medical premium**. The retiree pays the remaining 8% plus anything above the cap. Effective 7/1/13.", v: "See hire-date rule below" },
+        { t: "Medicare-eligible retirees", b: "District contributes **100%** of the third-highest plan in CalPERS Region 1 at the tier elected.", v: "Same" },
+        { t: "Hired after 12/1/2011", b: "**5% credit per year toward retiree medical, reaching 100% at 20 years** of employment. Excludes service-connected disability retirements.", v: "5%/yr to 100% at 20 yrs" },
+        { t: "Hired before 3/31/1986 and not Medicare-eligible", b: "District provides a stipend equal to 8% of the premium, up to the third-highest CalPERS Region 1 plan.", v: "—" },
+      ],
+      notes: ["Premium cap effective 1/1/14 is the **third-highest plan in CalPERS Region 1** at the selected tier.",
+              "Art. 16.E: future retirees and survivors hold **a vested right to the maximum retiree health benefits provided as of July 1, 2013**.",
+              "Retirees may buy dental and vision at their own cost — no District contribution."] },
+
+    { a: "City of Rocklin", cite: "Rocklin MOU 2025–2028, Art. 5",
+      lead: "A flat dollar cap with no vesting ladder at all — the only agency of the nine that rescinded one.",
+      tiers: [
+        { t: "Employed or retired as of 6/30/2025", b: "City contributes a maximum of **$1,200/mo** toward health insurance. **Eligible retirees receive 100% of the City's contribution** — there is no service-based reduction.", v: "**None.** The vesting schedule (Reso. 2003-91, GC §22983) was rescinded in the 2018 MOU" },
+        { t: "Hired on/after 7/1/2025", b: "**Not yet negotiated.** The MOU states the retiree medical benefit for these employees “will be negotiated by the Parties immediately following the conclusion of the negotiation for the 2025 to 2028 Memorandum of Understanding.”", v: "Unknown", warn: true },
+      ],
+      notes: ["Eligibility: meet CalPERS retirement requirements and retire within 120 days of separation.",
+              "In exchange for rescinding the vesting schedule, the benefit was made **permanent** — it continues beyond the term of any MOU for anyone retired or employed as of 6/30/2025."] },
+
+    { a: "City of Vacaville", cite: "Vacaville FA MOU 2025–2027, §§11.7–11.8",
+      lead: "The PEMHCA floor plus a small service-based stipend, backed by a funded savings account.",
+      tiers: [
+        { t: "Tier 3 — hired on/after 1/1/2020", b: "**PEMHCA minimum**, plus paid directly to the retiree when enrolled in a CalPERS plan: **$100/mo at 10–15 yrs**, **$150/mo at 15–20 yrs**, **$200/mo at 20+ yrs**. The minimum plus the City amount may not exceed 100% of the single-rate premium of the plan chosen.", v: "Service tiers at 10, 15, 20 yrs" },
+        { t: "Tier 3 — “Bridge Gap” RHS while active", b: "Employer contribution rises with service: **$600/yr** (probation–yr 5), **$840/yr** (yr 5–7), **$960/yr** (yr 7–10), **$1,200/yr** (yr 10+). The employee matches at $600 / $720 / $840 / $960.", v: "Vests at 5 yrs. Leave earlier and the employee gets only their own contributions back" },
+        { t: "Tiers 1 and 2 — hired before 1/1/2020", b: "Covered by City Resolutions 2019-117 and 2019-118 — **terms are not in the MOU and have not been read**.", v: "Unknown", warn: true },
+      ],
+      notes: ["OPEB trust: Tier 1 and Tier 2 employees contribute **$1,200/yr** ($46.15/pay period). **Tier 3 contributes nothing to the trust.**",
+              "Employee trust contributions stop once the City's actuarial liability is fully funded."] },
+
+    { a: "City of Folsom", cite: "Folsom MOU 2025–2028, §§12–13",
+      lead: "A hard cutoff at May 8, 2007.",
+      tiers: [
+        { t: "Hired on/before 5/8/2007, retiring 7/1/2007 or later", b: "City contribution equals **the City's active-employee health contribution** for the matching tier: retiree only, retiree + one, or retiree + two or more until age 55 — after 55 that drops to the employee + one rate **plus $100**.", v: "Under 5 yrs service: nothing. Over 5 yrs: qualifies" },
+        { t: "Cap on the above", b: "Frozen at the **1/1/2012** active-employee contribution, adjusted each January by CPI-W but **never more than 3% a year**.", v: "—" },
+        { t: "Hired after 5/8/2007", b: "**$25 per pay period into an HRA** — $650/yr, about **$54.17/mo**. No vested retiree medical benefit.", v: "N/A", bad: true },
+      ],
+      notes: ["The City runs a bi-annual actuarial study of retiree health costs, and either party may reopen the MOU on health benefits.",
+              "“Retire” means applying to CalPERS within 90 days of terminating City employment and receiving a CalPERS benefit."] },
+
+    { a: "City of Sacramento", cite: "Sac City MOU 2023–2024, §§8.8–8.9",
+      lead: "A defined package for legacy employees, and nothing at all for anyone hired this decade.",
+      tiers: [
+        { t: "Hired on/before 12/31/2019", b: "The total of: the **lowest-cost $25-copay medical plan for one**, the **lowest-cost PPO dental plan for one**, and **$25**.", v: "10–15 yrs = 50%, 15–20 yrs = 75%, 20+ yrs = 100%. Minimum age 50, or 30 yrs at any age" },
+        { t: "Retired on/after 7/1/1992 and before 1/1/2020", b: "Same package **plus an additional 5.28%** of the medical cost.", v: "Same ladder" },
+        { t: "Hired on/after 1/1/2020", b: "**“No employee hired on or after January 1, 2020, shall be eligible for any retiree insurance contributions provided by this Section.”** Nothing.", v: "N/A", bad: true },
+        { t: "Industrial disability / line-of-duty death survivors", b: "**100%** of the City retiree insurance contribution regardless of years of service.", v: "None required" },
+      ],
+      notes: ["Must retire through CalPERS within 120 days of separation or lose eligibility and the right to enroll in any City plan.",
+              "MERP: employees contribute **$75/mo** — both pre- and post-2020 hires. This is **employee** money, not a City contribution. (A successor MOU raising this to $150/mo effective 8/8/2026 was used elsewhere in this tool but is **not** in the local MOU folder.)",
+              "The Fire OPEB Trust was closed to new contributions; the existing balance is being spent down on post-employment medical."] },
+
+    { a: "City of Fairfield", cite: "Fairfield MOU 2022–2025, Art. 10 §§B and I",
+      lead: "The only agency of the nine that contributes nothing toward a retiree's premium.",
+      tiers: [
+        { t: "All retirees", b: "**“Retirees are responsible for paying the full cost of the premium.”** Miss a payment and the retiree and all dependents are terminated from the program with no right to re-enroll. Once coverage ends it cannot be reinstated.", v: "N/A", bad: true },
+        { t: "Retiree Medical Expense Program", b: "In place of a premium contribution, the City contributes **$75/mo per employee** to a MissionSquare Retiree Health Savings account. Tax-free, usable against any health premium or unreimbursed cost, and passes to a spouse or dependents at death.", v: "N/A" },
+      ],
+      notes: ["Retirees must enroll in a Medicare supplement at 65 or be terminated from the program. The Medicare premium is the retiree's own cost.",
+              "Surviving spouses and dependents may continue only at their own cost under COBRA.",
+              "Sick leave above 650 hours is converted each December at the regular hourly rate into the same RHS account.",
+              "This MOU expired 6/30/2025 and Fairfield remains out of contract."] },
+  ],
+
+  // ── what a 2026 hire actually gets ─────────────────────────────────────────
+  newHireIntro: "Every agency above has a legacy tier that is better than what it offers now. This is the only comparison that describes someone hired today — and it is the one that will describe most of the department within fifteen years.",
+  newHire: [
+    { a: "Cosumnes CSD", g: "Full premium less $85 / $175 / $225, vesting 10–20 yrs — but the employee pays 4.5% of base to get it", tone: "good" },
+    { a: "El Dorado Hills", g: "100% of the fifth-highest CalPERS Region 1 plan, vesting 10–20 yrs", tone: "good" },
+    { a: "Sac Metro", g: "92% of premium capped at the third-highest Region 1 plan; 5%/yr to 100% at 20 yrs", tone: "good" },
+    { a: "City of Rocklin", g: "Unknown — deliberately left unnegotiated for anyone hired on/after 7/1/2025", tone: "warn" },
+    { a: "City of Vacaville", g: "PEMHCA minimum + $100–$200/mo by service, plus an employer-funded RHS reaching $1,200/yr", tone: "mid" },
+    { a: "ROSEVILLE", g: "Nothing vested. PEMHCA minimum + $100/mo into an RHS after 5 years of service", tone: "bad", rsv: true },
+    { a: "City of Fairfield", g: "Nothing toward premium. $75/mo into an RHS", tone: "bad" },
+    { a: "City of Folsom", g: "Nothing vested. $25/pay period into an HRA — about $54/mo", tone: "bad" },
+    { a: "City of Sacramento", g: "Nothing. No employer contribution of any kind for post-2020 hires", tone: "bad" },
+  ],
+
+  closers: [
+    { tone: "bad", body: [
+      "**Four of the nine have closed the door on new hires — and we are one of them.** Roseville (8/15/2015), Folsom (5/8/2007), Sacramento City (1/1/2020) and Fairfield all give a modern hire no vested retiree medical. Rocklin has not decided yet.",
+      "**But we are not the worst of that group.** Our $100/mo RHS after five years beats Fairfield's $75/mo and Folsom's $54/mo, and Sacramento City gives nothing at all. The honest statement is that Roseville sits in the bottom half for new hires, not at the bottom.",
+    ]},
+    { tone: "plain", body: [
+      "**The gap that matters is against the districts, not the cities.** Cosumnes, El Dorado Hills and Sac Metro all still provide a real premium-based benefit to someone hired today, tied to a CalPERS Region 1 plan and vested over 10 to 20 years. All three are special districts. Every city in the comparison except Rocklin and Vacaville has moved to a savings-account model.",
+      "Cosumnes is the one to read carefully before citing it. Their benefit is the best of the nine, and their employees pay **4.5% of base salary** for it — roughly $475 a month at top step. That is a trade, not a gift.",
+    ]},
+    { tone: "gold", body: [
+      "**Three structural points worth making at a table.**",
+      "**1. The vesting ladder is near-universal.** Roseville, Cosumnes, El Dorado Hills and Sac Metro all use the same shape — 50% at 10 years rising to 100% at 20. Rocklin is the outlier: it rescinded its ladder in 2018 and pays 100% to every eligible retiree.",
+      "**2. The 120-day rule is near-universal too.** Roseville, Cosumnes, Rocklin and Sacramento City all require retiring through CalPERS within 120 days of separation. Folsom uses 90 days. Missing it forfeits the benefit entirely.",
+      "**3. A savings account is not a substitute for a premium contribution, and should not be compared to one as if it were.** $100/mo into an RHS for 25 years is a finite pot. A percentage-of-premium benefit lasts as long as the retiree does and rises with medical inflation. The two are different kinds of promise.",
+    ]},
+  ],
+
+  unknowns: [
+    "**Vacaville Tiers 1 and 2.** Governed by City Resolutions 2019-117 and 2019-118, which are referenced by the MOU but not contained in it. Not read.",
+    "**Rocklin post-7/1/2025 hires.** Deliberately unnegotiated. Whatever they settle on is the most directly comparable data point we will get.",
+    "**Sac Metro page citations.** Read from the District's published MOU online. Both copies in the local MOU folder are saved web-viewer pages, not PDFs, so they extract no contract text at all — worth replacing. The side letter extending to 6/30/2026 has still not been read.",
+    "**Fairfield is out of contract** — its MOU expired 6/30/2025, so the $75/mo RHS figure is from an expired agreement.",
+    "**Sacramento City successor MOU** is not in the local folder. The §8.9 figures above are from the 2023–2024 agreement.",
+    "**No agency's actual premium dollars were pulled.** “Third-highest” and “fifth-highest CalPERS Region 1 plan” are formulas, not amounts — converting them to dollars needs the current CalPERS Region 1 rate table.",
+    "**Dental and vision in retirement** were only checked where the MOU raised them. This is a medical comparison.",
+  ],
+
+  sourcing: "Every provision was read in the source MOU in the Comparable LMA Docs folder on 11/11/2026, except Sacramento Metro Fire, which was read from the District's published MOU at metrofire.ca.gov because both local copies are saved web pages rather than PDFs. PEMHCA minimum figures are from the City of Roseville's published retiree PEMHCA page ($162.00/mo for 2026, $167.00/mo for 2027).",
+  caveat: "Contract text only. None of this reflects how any agency actually administers these benefits, what the premiums cost in dollars, or what a given individual would receive. Eligibility turns on hire date, age, service credit and the 120-day retirement window — an individual member's answer requires their own dates.",
+};

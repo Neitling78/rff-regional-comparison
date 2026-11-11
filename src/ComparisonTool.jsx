@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
-import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF } from "./agencyData.js";
+import { AGENCY_INPUTS, buildAgencies, compute, COLUMNS, LOWER_IS_BETTER, AGENCY_NOTES, COLUMN_NOTES, buildTrueComp, TRUE_COLUMNS, solveTrueRaise, COMP_KEYS, AGENCY_RAW, MOU_LINKS, SALARY_LINKS, RANK_BASE_HRLY, buildRankComparison, RAISE_CALC, VERIFIED_LOCKED, OPEN_ITEMS, ROSEVILLE_VERIFIED, ROSE_RANK_RATIO, RANK_INCENTIVES, RANK_OPEN_ITEMS, CLASSIC_PERS, CLASSIC_PERS_SRC, CLASSIC_PERS_NO_CITYPERS, RANK_LONGEVITY, RANK_LONGEVITY_UNSOURCED, PENSIONABLE_KEYS, PENSIONABLE_OTHER_NOTE, ROSEVILLE_SERVICE_PAY, verifiedDataset, verifiedDiff, verifiedImpact, FLSA_LEAVE, TIMEBANK_BRIEF, RETIREE_MEDICAL } from "./agencyData.js";
 
 // ── BRAND LOGO ── IAFF Local 1592 crest (transparent PNG, embedded as a data URI).
 // Used as the fixed page-background watermark and the nav mark.
@@ -205,13 +205,14 @@ const METHODOLOGIES = [
   { id: "otvalue",   label: "OT Savings", active: true, private: true },
   { id: "timebank",  label: "Time Bank", active: true, private: true },
   { id: "flsaleave", label: "FLSA Leave", active: true, private: true },
+  { id: "retmed",    label: "Retiree Medical", active: true, private: true },
   { id: "strategies",label: "Strategies", active: true, private: true },
 ];
 // Tabs that render their own content. A tab added to METHODOLOGIES but not listed
 // here falls through to the "reserved and not populated yet" placeholder, which is
 // exactly the bug the old hand-maintained !== chain kept producing.
 const BUILT_TABS = ["roseville","true55","strategies","total4yr","truecost","otvalue",
-  "engineer","captain","bc","timebank","flsaleave"];
+  "engineer","captain","bc","timebank","flsaleave","retmed"];
 const EMPTY_VERIFY = Object.freeze({}); // Verification tab retired - see note at verifyData
 const ADMIN_PIN = "1592"; // change to any code; private tabs + all editing unlock with this PIN
 const PERS_KEYS = ["tc_ffMedicMonthly", "tc_ed", "tc_special", "tc_longevity", "tc_holiday"]; // PERSable components
@@ -1230,6 +1231,86 @@ export default function ComparisonTool() {
                   {FLSA_LEAVE.closers.map((c, i) => <DocCallout key={i} tone={c.tone} body={c.body} />)}
 
                   <DocFoot doc={FLSA_LEAVE} />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeMethodology === "retmed" && admin && (
+            <section style={{ marginTop: "0", paddingBottom: "12px" }}>
+              <div className="wrap">
+                <div className="sec-head">
+                  <div className="sec-tag">Retiree Health</div>
+                  <DocHead doc={RETIREE_MEDICAL} />
+                </div>
+                <div style={{ maxWidth: "880px" }}>
+
+                  <DocCallout tone="plain" title="The floor everyone already pays" body={[RETIREE_MEDICAL.pemhca]} />
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "30px 0 8px" }}>If you were hired today</div>
+                  <div style={{ fontSize: "13.5px", lineHeight: 1.68, color: C.text, margin: "11px 0" }}>{inl(RETIREE_MEDICAL.newHireIntro, "nhi")}</div>
+                  <div style={{ overflowX: "auto", margin: "12px 0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "560px" }}>
+                      <thead><tr>
+                        <th style={{ ...docTh, minWidth: "150px" }}>Agency</th>
+                        <th style={docTh}>What a 2026 hire gets toward retiree medical</th>
+                      </tr></thead>
+                      <tbody>{RETIREE_MEDICAL.newHire.map((r, i) => {
+                        const tn = DOC_TONE[r.tone === "mid" ? "plain" : r.tone === "warn" ? "gold" : r.tone] || DOC_TONE.plain;
+                        return (
+                          <tr key={i} style={r.rsv ? { background: "rgba(151,114,47,0.12)" } : undefined}>
+                            <td style={{ ...docTd, fontWeight: 700, color: r.rsv ? C.gold : C.text, borderLeft: `3px solid ${tn.bar}` }}>{r.a}</td>
+                            <td style={docTd}>{inl(r.g, "nh" + i)}</td>
+                          </tr>
+                        );
+                      })}</tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "34px 0 8px" }}>Every tier, agency by agency</div>
+                  {RETIREE_MEDICAL.agencies.map((ag, i) => (
+                    <div key={i} style={{ margin: "20px 0 26px", paddingLeft: ag.rsv ? "12px" : 0, borderLeft: ag.rsv ? `3px solid ${C.gold}` : "none" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "10px" }}>
+                        <span style={{ fontSize: "15px", fontWeight: 700, color: ag.rsv ? C.gold : C.text }}>{ag.a}</span>
+                        <span style={{ fontSize: "11px", color: C.textDim }}>{ag.cite}</span>
+                        {ag.webonly && <span style={{ fontSize: "10px", fontWeight: 700, color: C.gold, border: `1px solid ${C.gold}`, borderRadius: "2px", padding: "1px 5px" }}>NOT FROM LOCAL FILE</span>}
+                      </div>
+                      {ag.lead && <div style={{ fontSize: "13px", lineHeight: 1.6, color: C.textMuted, margin: "6px 0 2px" }}>{inl(ag.lead, "lead" + i)}</div>}
+                      <div style={{ overflowX: "auto", margin: "10px 0" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "560px" }}>
+                          <thead><tr>
+                            <th style={{ ...docTh, width: "26%" }}>Tier</th>
+                            <th style={docTh}>Employer contribution</th>
+                            <th style={{ ...docTh, width: "22%" }}>Vesting</th>
+                          </tr></thead>
+                          <tbody>{ag.tiers.map((t, j) => (
+                            <tr key={j} style={t.bad ? { background: "rgba(168,30,30,0.06)" } : t.warn ? { background: "rgba(151,114,47,0.08)" } : undefined}>
+                              <td style={{ ...docTd, fontWeight: 600 }}>{inl(t.t, "tt" + i + "_" + j)}</td>
+                              <td style={docTd}>{inl(t.b, "tb" + i + "_" + j)}</td>
+                              <td style={{ ...docTd, fontSize: "12px", color: C.textMuted }}>{inl(t.v, "tv" + i + "_" + j)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                      {ag.notes.map((n, k) => (
+                        <div key={k} style={{ fontSize: "12px", lineHeight: 1.6, color: C.textMuted, margin: "5px 0 0", paddingLeft: "13px", position: "relative" }}>
+                          <span style={{ position: "absolute", left: 0, color: C.textDim }}>&middot;</span>{inl(n, "an" + i + "_" + k)}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "34px 0 12px" }}>Where this leaves us</div>
+                  {RETIREE_MEDICAL.closers.map((c, i) => <DocCallout key={i} tone={c.tone} body={c.body} />)}
+
+                  <div style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.danger, paddingBottom: "5px", borderBottom: `1px solid ${C.border}`, margin: "34px 0 12px" }}>What we still do not know</div>
+                  <ul style={{ margin: "11px 0", paddingLeft: "22px" }}>
+                    {RETIREE_MEDICAL.unknowns.map((u, i) => (
+                      <li key={i} style={{ fontSize: "13px", lineHeight: 1.65, color: C.text, margin: "7px 0", paddingLeft: "3px" }}>{inl(u, "un" + i)}</li>
+                    ))}
+                  </ul>
+
+                  <DocFoot doc={RETIREE_MEDICAL} />
                 </div>
               </div>
             </section>
